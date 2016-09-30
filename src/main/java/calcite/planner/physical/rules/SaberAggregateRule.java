@@ -211,6 +211,7 @@ public class SaberAggregateRule implements SaberRule{
 		
 	}
 
+	/* Get the aggregations and their references to columns. Count is  assigned to timestamp column.*/
 	private Pair<AggregationType[], FloatColumnReference[]> getAggregationTypesAndAttributes(String operands) {
 		String aggr [] = operands.substring(operands.indexOf("]")+2).split(",");
 		
@@ -239,7 +240,7 @@ public class SaberAggregateRule implements SaberRule{
 		return new Pair<AggregationType[], FloatColumnReference[]>(aggregationTypes,aggregationAttributes);
 	}
 
-	
+	/* Get the group by attributes*/
 	private Expression[] getGroupByAttributes(String operands) {
 		Expression [] groupByAttributes = new Expression[0];
 		String groupAttrs = operands.substring(operands.indexOf("{")+1, operands.indexOf("}")).trim();

@@ -223,7 +223,7 @@ public class SaberFilterRule implements SaberRule {
 		return new IntComparisonPredicate(comparisonOperator, firstOp, secondOp);			
 	}
 	
-	/* A method to create a complex expression that contains one OR/AND*/
+	/* A method to create a complex expression that contains only ANDs/ORs*/
 	public IPredicate createComplexExpression(String operands){
 		boolean isAnd = true;
 		if (operands.contains("OR")) {

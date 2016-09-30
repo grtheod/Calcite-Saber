@@ -38,23 +38,23 @@ public class PhysicalRuleConverter {
 		for (int counter=operators.length - 1; counter >= 0;counter--){
 			
 			operator = operators[counter];
-            List <String> args = new ArrayList<String>(); 
+			List <String> args = new ArrayList<String>(); 
 			//System.out.println("Converting operator : "+ operator);
 			
 			if ((operator).contains("LogicalTableScan")){
 				temp = operator.substring(operator.indexOf('[')+2,operator.indexOf(']'));
 				String temps[] = temp.split(", ");
-				schema = temps[0];						
-                table = temps[1];
+				schema = temps[0];
+				table = temps[1];
 			} else{
 				logicalOperator = (operator.substring(0,operator.indexOf("("))).trim();
 				operands = operator.substring(operator.indexOf('('));
 				if (!(schema.equals("") && table.equals(""))) {				
 	                args.add("--schema");
 	                args.add(schema);
-					args.add("--table");
-	                args.add(table);
-					table="";
+	                args.add("--table");
+					args.add(table);
+	                table="";
 					schema="";
 				} 
 				args.add("--operands");
