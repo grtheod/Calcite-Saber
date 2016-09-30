@@ -5,7 +5,7 @@ maven repositories.
 
 2) Add saber-0.0.1-SNAPSHOT.jar from https://github.com/lsds/saber
 
-3) Use the Tester.java and change the sql String in lines 53-54.
+3) Use the Tester.java and change the sql String in lines 53-54 (https://github.com/giwrgostheod/Calcite-Saber/blob/master/src/main/java/calcite/Tester.java#L53).
 
 Orders Schema
 -------------------------
