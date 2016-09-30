@@ -50,12 +50,12 @@ public class PhysicalRuleConverter {
 				logicalOperator = (operator.substring(0,operator.indexOf("("))).trim();
 				operands = operator.substring(operator.indexOf('('));
 				if (!(schema.equals("") && table.equals(""))) {				
-	                args.add("--schema");
-	                args.add(schema);
-	                args.add("--table");
-					args.add(table);
-	                table="";
-					schema="";
+	                	args.add("--schema");
+	                	args.add(schema);
+	                	args.add("--table");
+				args.add(table);
+	                	table="";
+				schema="";
 				} 
 				args.add("--operands");
 				args.add(operands);
@@ -64,18 +64,18 @@ public class PhysicalRuleConverter {
 		}
 		
 		System.out.println("---------------------------------------------");
-	    /* Transformation from relational operators to physical => */ 
+	    	/* Transformation from relational operators to physical => */ 
 		
 		/* Setting up the input schema and the input data of Saber */
-	    SaberSchema s = new SaberSchema(6);
-	    ITupleSchema orders = s.createTable(); //column references have +1 value !!
-	    orders.setAttributeName(1, "orderid");
-	    orders.setAttributeName(2, "productid");
-	    orders.setAttributeName(3, "untis");
-	   
-	    Pair<byte [],ByteBuffer> mockData = s.fillTable(orders);
-	    byte [] data = mockData.left;
-	    ByteBuffer b = mockData.right; 
+	    	SaberSchema s = new SaberSchema(6);
+	    	ITupleSchema orders = s.createTable(); //column references have +1 value !!
+		orders.setAttributeName(1, "orderid");
+	    	orders.setAttributeName(2, "productid");
+	    	orders.setAttributeName(3, "untis");
+
+	    	Pair<byte [],ByteBuffer> mockData = s.fillTable(orders);
+	    	byte [] data = mockData.left;
+	    	ByteBuffer b = mockData.right; 
 	    
 		/*  Creating a single chain of queries. For complex queries that use JOIN
 		 *  we have to create multiple chains and join them. */	    
@@ -93,9 +93,9 @@ public class PhysicalRuleConverter {
 			    query = rule.getQuery();
 			    outputSchema = rule.getOutputSchema();
 			    System.out.println("OutputSchema : " + outputSchema.getSchema());
-				queries.add(query);
+			    queries.add(query);
 			} else {
-				operation = new RuleAssembler(physicalOperators.get(i).left, physicalOperators.get(i).right, outputSchema);	    
+			    operation = new RuleAssembler(physicalOperators.get(i).left, physicalOperators.get(i).right, outputSchema);	    
 			    rule = operation.construct();
 			    Query query1 = rule.getQuery();
 			    outputSchema = rule.getOutputSchema();
@@ -105,7 +105,7 @@ public class PhysicalRuleConverter {
 			    query = query1; //keep the last query to build the chain
 			}
 			if (physicalOperators.get(i).left.equals("LogicalAggregate")){
-				aggregates.add(rule);
+			    aggregates.add(rule);
 			}
 			i++;
 			System.out.println();
