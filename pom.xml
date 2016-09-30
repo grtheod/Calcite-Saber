@@ -1,0 +1,92 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.calcite</groupId>
+  <artifactId>calcite</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <name>Calcite-Saber</name>
+  <description>An integration with Saber</description>
+  
+  <dependencies>
+	<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+	<dependency>
+	    <groupId>org.slf4j</groupId>
+	    <artifactId>slf4j-api</artifactId>
+	    <version>1.7.21</version>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
+	<dependency>
+	    <groupId>org.slf4j</groupId>
+	    <artifactId>slf4j-simple</artifactId>
+	    <version>1.7.21</version>
+	</dependency>	
+	<!-- https://mvnrepository.com/artifact/net.sourceforge.javacsv/javacsv -->
+	<dependency>
+    	<groupId>net.sourceforge.javacsv</groupId>
+    	<artifactId>javacsv</artifactId>
+    	<version>2.0</version>
+	</dependency>
+	<dependency>
+		<groupId>com.googlecode.json-simple</groupId>
+		<artifactId>json-simple</artifactId>
+		<version>1.1</version>
+  	</dependency>
+	<!-- https://mvnrepository.com/artifact/net.sf.opencsv/opencsv -->
+	<dependency>
+	    <groupId>net.sf.opencsv</groupId>
+	    <artifactId>opencsv</artifactId>
+	    <version>2.3</version>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+	<dependency>
+	    <groupId>com.google.guava</groupId>
+	    <artifactId>guava</artifactId>
+	    <version>19.0</version>
+	</dependency>
+	
+
+
+<!-- https://mvnrepository.com/artifact/org.apache.calcite.avatica/avatica -->
+<dependency>
+    <groupId>org.apache.calcite.avatica</groupId>
+    <artifactId>avatica</artifactId>
+    <version>1.8.0</version>
+</dependency>
+
+
+<!-- https://mvnrepository.com/artifact/net.hydromatic/eigenbase-properties -->
+<dependency>
+    <groupId>net.hydromatic</groupId>
+    <artifactId>eigenbase-properties</artifactId>
+    <version>1.1.5</version>
+</dependency>
+<!-- https://mvnrepository.com/artifact/org.codehaus.janino/janino -->
+<dependency>
+    <groupId>org.codehaus.janino</groupId>
+    <artifactId>janino</artifactId>
+    <version>2.7.6</version>
+</dependency>
+<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-lang3</artifactId>
+    <version>3.2</version>
+</dependency>
+<!-- https://mvnrepository.com/artifact/commons-logging/commons-logging -->
+<dependency>
+    <groupId>commons-logging</groupId>
+    <artifactId>commons-logging</artifactId>
+    <version>1.1.3</version>
+</dependency>
+
+
+<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+<dependency>
+    <groupId>commons-io</groupId>
+    <artifactId>commons-io</artifactId>
+    <version>2.4</version>
+</dependency>
+
+
+  </dependencies>
+  
+</project>
