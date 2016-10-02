@@ -112,11 +112,11 @@ public class SaberProjectRule implements SaberRule {
 			if (args.get(i).equals("--table")) {
 				table = args.get(j);
 			} else
-			if(args.get(i).equals("--queryId")) {
+			if (args.get(i).equals("--queryId")) {
 				queryId = Integer.parseInt(args.get(j));
 			} else
-				if(args.get(i).equals("--timestampReference")) {
-					timestampReference = Long.parseLong(args.get(j));
+			if (args.get(i).equals("--timestampReference")) {
+				timestampReference = Long.parseLong(args.get(j));
 			} else {
 				System.err.println(String.format("error: unknown flag %s %s", args.get(i), args.get(j)));
 				System.exit(1);
