@@ -111,8 +111,8 @@ public class PhysicalRuleConverter {
 			    aggregates.add(rule);
 			}
 			queryId++;
-		    System.out.println("OutputSchema : " + outputSchema.getSchema());
-		    System.out.println("Query is : " + query.getName());
+		    	System.out.println("OutputSchema : " + outputSchema.getSchema());
+		    	System.out.println("Query is : " + query.getName());
 			System.out.println();
 		}
 		
