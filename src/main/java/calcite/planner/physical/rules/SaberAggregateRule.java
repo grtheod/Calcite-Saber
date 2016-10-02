@@ -71,7 +71,9 @@ public class SaberAggregateRule implements SaberRule{
 		String operands = null;
 		String stringSchema = null;
 		String table = null;
-		
+		int queryId = 0;
+		long timestampReference = 0;
+		 
 		/* Parse command line arguments */
 		int i, j;
 		for (i = 0; i < args.size(); ) {
@@ -117,6 +119,12 @@ public class SaberAggregateRule implements SaberRule{
 			} else
 			if (args.get(i).equals("--table")) {
 				table = args.get(j);
+			} else
+			if(args.get(i).equals("--queryId")) {
+				queryId = Integer.parseInt(args.get(j));
+			} else
+				if(args.get(i).equals("--timestampReference")) {
+					timestampReference = Long.parseLong(args.get(j));
 			} else {
 				System.err.println(String.format("error: unknown flag %s %s", args.get(i), args.get(j)));
 				System.exit(1);
@@ -124,7 +132,7 @@ public class SaberAggregateRule implements SaberRule{
 			i = j + 1;
 
 		}
-		
+
 		SystemConf.CIRCULAR_BUFFER_SIZE = 32 * 1048576; //maybe change the size
 		SystemConf.LATENCY_ON = false;
 		
@@ -177,10 +185,7 @@ public class SaberAggregateRule implements SaberRule{
 		Set<QueryOperator> operators = new HashSet<QueryOperator>();
 		operators.add(operator);
 		
-		long timestampReference = System.nanoTime();
-		
-		query = new Query (0, operators, schema, window, null, null, queryConf, timestampReference);		
-		
+		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
 		
 		/* Create output schema */	
 		int numberOfKeyAttributes = groupByAttributes.length;

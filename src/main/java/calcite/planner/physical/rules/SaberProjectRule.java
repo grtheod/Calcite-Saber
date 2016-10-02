@@ -63,6 +63,8 @@ public class SaberProjectRule implements SaberRule {
 		String operands = null;
 		String stringSchema = null;
 		String table = null;
+		int queryId = 0;
+		long timestampReference = 0;
 		
 		/* Parse command line arguments */
 		int i, j;
@@ -106,9 +108,15 @@ public class SaberProjectRule implements SaberRule {
 			} else
 			if (args.get(i).equals("--schema")) {
 				stringSchema = args.get(j);
-			}else
+			} else
 			if (args.get(i).equals("--table")) {
 				table = args.get(j);
+			} else
+			if(args.get(i).equals("--queryId")) {
+				queryId = Integer.parseInt(args.get(j));
+			} else
+				if(args.get(i).equals("--timestampReference")) {
+					timestampReference = Long.parseLong(args.get(j));
 			} else {
 				System.err.println(String.format("error: unknown flag %s %s", args.get(i), args.get(j)));
 				System.exit(1);
@@ -173,10 +181,8 @@ public class SaberProjectRule implements SaberRule {
 		
 		Set<QueryOperator> operators = new HashSet<QueryOperator>();
 		operators.add(operator);
-		
-		long timestampReference = System.nanoTime();
-		
-		query = new Query (0, operators, schema, window, null, null, queryConf, timestampReference);		
+				
+		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);		
 		
 	}
 	

@@ -93,7 +93,7 @@ public class QueryPlanner {
     hepProgramBuilder.addRuleClass(FilterAggregateTransposeRule.class);
     hepProgramBuilder.addRuleClass(FilterJoinRule.class);
     hepProgramBuilder.addRuleClass(JoinProjectTransposeRule.class);
-    //hepProgramBuilder.addRuleClass(ProjectToWindowRule.class);
+    hepProgramBuilder.addRuleClass(ProjectToWindowRule.class);
     hepProgramBuilder.addRuleClass(ProjectJoinTransposeRule.class);
     hepProgramBuilder.addRuleClass(ProjectTableScanRule.class);
     hepProgramBuilder.addRuleClass(ProjectFilterTransposeRule.class);
@@ -113,7 +113,7 @@ public class QueryPlanner {
     this.hepPlanner.addRule(FilterProjectTransposeRule.INSTANCE);
     this.hepPlanner.addRule(FilterAggregateTransposeRule.INSTANCE);
     this.hepPlanner.addRule(FilterTableScanRule.INSTANCE);
-    //this.hepPlanner.addRule(ProjectToWindowRule.PROJECT);
+    this.hepPlanner.addRule(ProjectToWindowRule.PROJECT);
     this.hepPlanner.addRule(ProjectJoinTransposeRule.INSTANCE);
     this.hepPlanner.addRule(JoinProjectTransposeRule.BOTH_PROJECT);
     this.hepPlanner.addRule(ProjectTableScanRule.INSTANCE);

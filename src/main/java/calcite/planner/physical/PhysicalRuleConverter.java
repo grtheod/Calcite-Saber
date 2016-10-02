@@ -69,7 +69,7 @@ public class PhysicalRuleConverter {
 		/* Setting up the input schema and the input data of Saber */
 	    	SaberSchema s = new SaberSchema(6);
 	    	ITupleSchema orders = s.createTable(); //column references have +1 value !!
-		orders.setAttributeName(1, "orderid");
+	    	orders.setAttributeName(1, "orderid");
 	    	orders.setAttributeName(2, "productid");
 	    	orders.setAttributeName(3, "untis");
 
@@ -84,30 +84,35 @@ public class PhysicalRuleConverter {
 		Query query = null;
 		ITupleSchema outputSchema = null;
 		Set<Query> queries = new HashSet<Query>();
-		int i = 0;
+		int queryId = 0;
+		long timestampReference = System.nanoTime();
 		List <SaberRule> aggregates = new ArrayList <SaberRule>();
 		for(Pair<String,List<String>> po : physicalOperators){
-			if (i == 0) {
+			po.right.add("--queryId");
+			po.right.add(Integer.toString(queryId));
+			po.right.add("--timestampReference");
+			po.right.add(Long.toString(timestampReference));
+			if (queryId == 0) {
 			    operation = new RuleAssembler(physicalOperators.get(0).left, physicalOperators.get(0).right, orders);
 			    rule = operation.construct();
 			    query = rule.getQuery();
 			    outputSchema = rule.getOutputSchema();
-			    System.out.println("OutputSchema : " + outputSchema.getSchema());
 			    queries.add(query);
 			} else {
-			    operation = new RuleAssembler(physicalOperators.get(i).left, physicalOperators.get(i).right, outputSchema);	    
+			    operation = new RuleAssembler(physicalOperators.get(queryId).left, physicalOperators.get(queryId).right, outputSchema);	    
 			    rule = operation.construct();
 			    Query query1 = rule.getQuery();
 			    outputSchema = rule.getOutputSchema();
-			    System.out.println("OutputSchema : " + outputSchema.getSchema());			    
 			    query.connectTo(query1);
 			    queries.add(query1);
 			    query = query1; //keep the last query to build the chain
 			}
-			if (physicalOperators.get(i).left.equals("LogicalAggregate")){
+			if (physicalOperators.get(queryId).left.equals("LogicalAggregate")){
 			    aggregates.add(rule);
 			}
-			i++;
+			queryId++;
+		    System.out.println("OutputSchema : " + outputSchema.getSchema());
+		    System.out.println("Query is : " + query.getName());
 			System.out.println();
 		}
 		
@@ -125,10 +130,7 @@ public class PhysicalRuleConverter {
 		}
 		
 		/* Execute the query. */
-		SystemConf.LATENCY_ON = false;
-		long timestampReference = System.nanoTime(); 
-		/* I have used different timestamps for all the queries. Maybe they should have the same. */
-		
+		SystemConf.LATENCY_ON = false;		
 		if (SystemConf.LATENCY_ON) {
 			long systemTimestamp = (System.nanoTime() - timestampReference) / 1000L; /* usec */
 			long packedTimestamp = Utils.pack(systemTimestamp, b.getLong(0));

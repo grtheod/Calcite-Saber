@@ -39,7 +39,7 @@ public class SaberSchema {
 	public Pair<byte [],ByteBuffer> fillTable(ITupleSchema schema){
 		
 		int tupleSize = schema.getTupleSize();
-		//System.out.println("tupleSize="+tupleSize);
+		System.out.println("tupleSize="+tupleSize);
 		byte [] data = new byte [tupleSize * tuplesPerInsert];
 		
 		ByteBuffer b = ByteBuffer.wrap(data);
