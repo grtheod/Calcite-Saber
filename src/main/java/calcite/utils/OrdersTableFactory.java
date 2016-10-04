@@ -40,12 +40,12 @@ public class OrdersTableFactory implements TableFactory<Table>  {
  */
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
-			{1, 3, 10, 1},
+		    {1, 3, 10, 1},
 		    {2, 7, 5, 1},
 		    {3, 1, 12, 2},
 		    {4, 9, 3, 3},
 		    {5, 10, 3, 1},
-			{6, 3, 13, 7},
+	            {6, 3, 13, 7},
 		    {7, 7, 15, 5},
 		    {8, 1, 2, 3},
 		    {9, 9, 3, 2},
