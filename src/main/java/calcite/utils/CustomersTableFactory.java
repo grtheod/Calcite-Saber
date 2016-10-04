@@ -40,12 +40,12 @@ public class CustomersTableFactory implements TableFactory<Table>  {
  */
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
-			{1, 1012},
+		    {1, 1012},
 		    {2, 5334},
 		    {3, 2222},
 		    {4, 3232},
 		    {5, 3121},
-			{6, 13232},
+		    {6, 13232},
 		    {7, 15123},
 		};
 		return new CustomersTable(ImmutableList.copyOf(rows));
