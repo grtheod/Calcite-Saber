@@ -50,6 +50,7 @@ public class SaberSchema {
 			for (int i = 0; i < numberOfAttributes; i ++)
 				//number = (int) (Math.random() * 10 + 1);				
 				b.putInt(1);
+				b.put(schema.getPad());
 		}
 		
 		return new Pair<byte [],ByteBuffer>(data,b);		

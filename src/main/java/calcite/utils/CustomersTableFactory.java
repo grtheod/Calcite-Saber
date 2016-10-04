@@ -31,7 +31,7 @@ import org.apache.calcite.util.ImmutableBitSet;
 
 import com.google.common.collect.ImmutableList;
 
-public class OrdersTableFactory implements TableFactory<Table>  {
+public class CustomersTableFactory implements TableFactory<Table>  {
 /*
  * @param schema Schema this table belongs to
  * @param name Name of this table
@@ -40,37 +40,30 @@ public class OrdersTableFactory implements TableFactory<Table>  {
  */
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
-			{1, 3, 10, 1},
-		    {2, 7, 5, 1},
-		    {3, 1, 12, 2},
-		    {4, 9, 3, 3},
-		    {5, 10, 3, 1},
-			{6, 3, 13, 7},
-		    {7, 7, 15, 5},
-		    {8, 1, 2, 3},
-		    {9, 9, 3, 2},
-		    {10, 10, 2, 4},		    
-		    {11, 8, 1, 6},
-		    {12, 8, 12, 6}
+			{1, 1012},
+		    {2, 5334},
+		    {3, 2222},
+		    {4, 3232},
+		    {5, 3121},
+			{6, 13232},
+		    {7, 15123},
 		};
-		return new OrdersTable(ImmutableList.copyOf(rows));
+		return new CustomersTable(ImmutableList.copyOf(rows));
 	}
 
-	public static class OrdersTable implements ScannableTable {
+	public static class CustomersTable implements ScannableTable {
 		protected final RelProtoDataType protoRowType = new RelProtoDataType() {
 			public RelDataType apply(RelDataTypeFactory a0) {
 		        return a0.builder()
-		            .add("orderid", SqlTypeName.INTEGER)
-		            .add("productid", SqlTypeName.INTEGER)
-		            .add("units", SqlTypeName.INTEGER)
 		            .add("customerid", SqlTypeName.INTEGER)
+		            .add("phone", SqlTypeName.INTEGER)
 		            .build();
 			}
 		};
 
 		private final ImmutableList<Object[]> rows;
 
-		public OrdersTable(ImmutableList<Object[]> rows) {
+		public CustomersTable(ImmutableList<Object[]> rows) {
 			this.rows = rows;
 		}
 
@@ -93,3 +86,4 @@ public class OrdersTableFactory implements TableFactory<Table>  {
 		
 	}
 }
+

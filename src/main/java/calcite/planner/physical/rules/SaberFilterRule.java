@@ -154,7 +154,7 @@ public class SaberFilterRule implements SaberRule {
 		/* Reset tuple size */
 		int tupleSize = schema.getTupleSize();
 
-		IPredicate predicate =  getFilterConditions(operands);
+		IPredicate predicate =  getFilterCondition(operands);
 		
 		cpuCode = new Selection (predicate);
 		gpuCode = new SelectionKernel (schema, predicate, null, batchSize);
@@ -173,7 +173,7 @@ public class SaberFilterRule implements SaberRule {
 	/*
 	 * Create filter conditions from a given String (only for integer Expressions).
 	 * */
-	public IPredicate getFilterConditions(String operands){
+	public IPredicate getFilterCondition(String operands){
 		IPredicate predicate = null;		
 		operands =  operands.substring(operands.indexOf("=")+1); 
 		//op = op.replace("(", "").replace(")", "").replace("[$", "").replace("]", "").replace("]", "").trim();
@@ -212,9 +212,9 @@ public class SaberFilterRule implements SaberRule {
 	public IPredicate createSimpleExpression(String operands){
 		String compOp = operands.substring(0, operands.indexOf("(")).replace("[", "");
 		int comparisonOperator = getComparisonOperator(compOp);
-		String [] ops = operands.substring(operands.indexOf("(")+1).replace(")","").replace("]", "").split(",");
-		
+		String [] ops = operands.substring(operands.indexOf("(")+1).replace(")","").replace("]", "").split(",");		
 		IntExpression firstOp,secondOp;
+		
 		if(ops[0].contains("$")){
 			firstOp = new IntColumnReference(Integer.parseInt(ops[0].replace("$", "").trim()) + 1);
 		}else {

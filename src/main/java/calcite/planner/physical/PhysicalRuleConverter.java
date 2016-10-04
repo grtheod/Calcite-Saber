@@ -35,39 +35,49 @@ public class PhysicalRuleConverter {
 						
 		List<Pair<String,List<String>>> physicalOperators = new ArrayList<Pair<String,List<String>>>();
 		String schema = "",table = "",temp,operator,logicalOperator,operands;
+		int whiteSpaces; /* whitespaces from the begging of the logical rule will be used for nested joins*/
 		for (int counter=operators.length - 1; counter >= 0;counter--){
 			
 			operator = operators[counter];
 			List <String> args = new ArrayList<String>(); 
 			//System.out.println("Converting operator : "+ operator);
+			whiteSpaces = 0;
 			
 			if ((operator).contains("LogicalTableScan")){
+				temp = operator.substring(0,operator.indexOf("L"));
+				whiteSpaces = temp.length();
+				
 				temp = operator.substring(operator.indexOf('[')+2,operator.indexOf(']'));
 				String temps[] = temp.split(", ");
 				schema = temps[0];
 				table = temps[1];
 			} else{
+				temp = operator.substring(0,operator.indexOf("L"));
+				whiteSpaces = temp.length();
+				
 				logicalOperator = (operator.substring(0,operator.indexOf("("))).trim();
 				operands = operator.substring(operator.indexOf('('));
-				if (!(schema.equals("") && table.equals(""))) {				
+				if (!(schema.equals("") || table.equals(""))) {				
 	                	args.add("--schema");
 	                	args.add(schema);
 	                	args.add("--table");
-				args.add(table);
+	                	args.add(table);
 	                	table="";
-				schema="";
+	                	schema="";
 				} 
+				
 				args.add("--operands");
 				args.add(operands);
 				physicalOperators.add(new Pair<String, List<String>>(logicalOperator,args));
 			}
+			System.out.println("WhiteSpaces = "+ whiteSpaces);
 		}
 		
 		System.out.println("---------------------------------------------");
 	    	/* Transformation from relational operators to physical => */ 
 		
 		/* Setting up the input schema and the input data of Saber */
-	    	SaberSchema s = new SaberSchema(6);
+	    	SaberSchema s = new SaberSchema(3);
 	    	ITupleSchema orders = s.createTable(); //column references have +1 value !!
 	    	orders.setAttributeName(1, "orderid");
 	    	orders.setAttributeName(2, "productid");
@@ -76,6 +86,15 @@ public class PhysicalRuleConverter {
 	    	Pair<byte [],ByteBuffer> mockData = s.fillTable(orders);
 	    	byte [] data = mockData.left;
 	    	ByteBuffer b = mockData.right; 
+	    	
+	    	SaberSchema s1 = new SaberSchema(2);
+	    	ITupleSchema products = s1.createTable(); //column references have +1 value !!
+	    	products.setAttributeName(1, "productid");
+	    	products.setAttributeName(2, "description");	    
+
+	    	Pair<byte [],ByteBuffer> mockData1 = s1.fillTable(products);
+	    	byte [] data1 = mockData1.left;
+	    	ByteBuffer b1 = mockData1.right; 
 	    
 		/*  Creating a single chain of queries. For complex queries that use JOIN
 		 *  we have to create multiple chains and join them. */	    
@@ -93,7 +112,16 @@ public class PhysicalRuleConverter {
 			po.right.add("--timestampReference");
 			po.right.add(Long.toString(timestampReference));
 			if (queryId == 0) {
-			    operation = new RuleAssembler(physicalOperators.get(0).left, physicalOperators.get(0).right, orders);
+				ITupleSchema inputSchema = null;
+				if(po.right.contains("--table")){
+					int index = po.right.indexOf("--table");
+					if(po.right.get(index+1).equals("orders")){
+						inputSchema = orders;
+					} else {
+						inputSchema = products;
+					}
+				}
+			    operation = new RuleAssembler(physicalOperators.get(0).left, physicalOperators.get(0).right, inputSchema);
 			    rule = operation.construct();
 			    query = rule.getQuery();
 			    outputSchema = rule.getOutputSchema();

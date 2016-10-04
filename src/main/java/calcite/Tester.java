@@ -27,6 +27,7 @@ import calcite.examples.StreamQueryPlanner.Product;
 import calcite.examples.StreamQueryPlanner.Ps;
 import calcite.planner.QueryPlanner;
 import calcite.planner.physical.PhysicalRuleConverter;
+import calcite.utils.CustomersTableFactory;
 import calcite.utils.OrdersTableFactory;
 import calcite.utils.ProductsTableFactory;
 import calcite.utils.SaberSchema;
@@ -45,13 +46,14 @@ public class Tester {
 	    SchemaPlus schema = rootSchema.add("s", new AbstractSchema());	    	   	    
 	    schema.add("orders", new OrdersTableFactory().create(schema, "orders", null, null));
 	    schema.add("products", new ProductsTableFactory().create(schema, "products", null, null));
-	    	  
+	    schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));	    	  
 	    
 	    Statement statement = connection.createStatement();
 	    QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
 	    	    	   	  	    
-	    RelNode logicalPlan = queryPlanner.getLogicalPlan("select productid,count(*),sum(units) from s.orders"
-	    		+ " where units > 5 group by productid  ");	 //and s.orders.units = 5   
+	    RelNode logicalPlan = queryPlanner.getLogicalPlan("select * from s.orders, s.customers , s.products where s.orders.customerid = s.customers.customerid and s.orders.productid = s.products.productid and units>5");
+	    		//+ "select productid,count(*),sum(units) from s.orders"
+	    		//+ " where units > 5 group by productid  ");	 //and s.orders.units = 5   
 	    //(18 > 5) and((s.orders.units > 5 and (1 > 4) and (3 = 4)) or (1>0))
 	    System.out.println(RelOptUtil.toString(logicalPlan,SqlExplainLevel.EXPPLAN_ATTRIBUTES));
 	    	    
