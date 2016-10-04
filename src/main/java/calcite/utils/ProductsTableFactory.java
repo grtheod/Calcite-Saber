@@ -28,7 +28,7 @@ public class ProductsTableFactory implements TableFactory<Table>  {
 	
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
-			{3, "paint"},
+		    {3, "paint"},
 		    {7, "paper"},
 		    {1, "brush"},
 		    {9, "paint"},
