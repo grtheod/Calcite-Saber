@@ -51,7 +51,7 @@ public class Tester {
 	    Statement statement = connection.createStatement();
 	    QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
 	    	    	   	  	    
-	    RelNode logicalPlan = queryPlanner.getLogicalPlan("select * from s.orders, s.customers , s.products where s.orders.customerid = s.customers.customerid and s.orders.productid = s.products.productid and units>5");
+	    RelNode logicalPlan = queryPlanner.getLogicalPlan("select productid, sum(units) from s.orders where units>5 group by productid");
 	    		//+ "select productid,count(*),sum(units) from s.orders"
 	    		//+ " where units > 5 group by productid  ");	 //and s.orders.units = 5   
 	    //(18 > 5) and((s.orders.units > 5 and (1 > 4) and (3 = 4)) or (1>0))

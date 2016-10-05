@@ -117,6 +117,9 @@ public class SaberProjectRule implements SaberRule {
 			} else
 			if (args.get(i).equals("--timestampReference")) {
 				timestampReference = Long.parseLong(args.get(j));
+			} else
+			if (args.get(i).equals("--whitespaces")) {
+					
 			} else {
 				System.err.println(String.format("error: unknown flag %s %s", args.get(i), args.get(j)));
 				System.exit(1);

@@ -7,6 +7,7 @@ import org.apache.calcite.util.Pair;
 import calcite.planner.physical.rules.SaberAggregateRule;
 import calcite.planner.physical.rules.SaberFilterRule;
 import calcite.planner.physical.rules.SaberProjectRule;
+import calcite.planner.physical.rules.SaberScanRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
 
@@ -15,7 +16,8 @@ public class RuleAssembler {
 	protected static final String PROJECT= "LogicalProject";
 	protected static final String FILTER = "LogicalFilter";
 	protected static final String JOIN = "LogicalJoin";	
-	protected static final String AGGREGATE = "LogicalAggregate";	
+	protected static final String AGGREGATE = "LogicalAggregate";
+	protected static final String SCAN = "LogicalTableScan";
 	String operator;
 	List <String> args;
 	ITupleSchema schema;
@@ -50,7 +52,12 @@ public class RuleAssembler {
 				System.out.println("==> Assembling Aggregate");
 				SaberAggregateRule aggregate = new SaberAggregateRule(schema,args);
 				aggregate.prepareRule();				
-				return aggregate;			
+				return aggregate;	
+			case SCAN :
+				System.out.println("==> Assembling Scan");
+				SaberScanRule scan = new SaberScanRule(schema,args);
+				scan.prepareRule();				
+				return scan;
 			default :
 				
 		}

@@ -7,6 +7,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.Contexts;
@@ -22,11 +23,13 @@ import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
 import org.apache.calcite.rel.rules.FilterJoinRule;
+import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
+import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
@@ -44,6 +47,7 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.Planner;
+import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.RuleSets;
@@ -85,6 +89,20 @@ public class VolcanoTester {
 
 		    traitDefs.add(ConventionTraitDef.INSTANCE);
 		    traitDefs.add(RelCollationTraitDef.INSTANCE);
+		    
+		    Program program =Programs.ofRules(ReduceExpressionsRule.CALC_INSTANCE,
+	        		FilterJoinRule.FILTER_ON_JOIN,
+	        		FilterProjectTransposeRule.INSTANCE,
+	        		FilterAggregateTransposeRule.INSTANCE,
+	        		FilterTableScanRule.INSTANCE,
+	        		ProjectToWindowRule.PROJECT,
+	        		ProjectJoinTransposeRule.INSTANCE,
+	        		JoinProjectTransposeRule.BOTH_PROJECT,
+	        		ProjectTableScanRule.INSTANCE,
+	        		ProjectFilterTransposeRule.INSTANCE
+	        		//,ProjectMergeRule.INSTANCE,
+	        		//FilterMergeRule.INSTANCE
+	        		);
 
 		    FrameworkConfig config = Frameworks.newConfigBuilder()
 		        .parserConfig(SqlParser.configBuilder()
@@ -97,7 +115,7 @@ public class VolcanoTester {
 		        .ruleSets(SaberRuleSets.getRuleSets())
 		        .costFactory(null) //If null, use the default cost factory for that planner.
 		        .typeSystem(SaberRelDataTypeSystem.SABER_REL_DATATYPE_SYSTEM)
-		        .programs(Programs.ofRules(ReduceExpressionsRule.CALC_INSTANCE,FilterJoinRule.FILTER_ON_JOIN,FilterProjectTransposeRule.INSTANCE,FilterAggregateTransposeRule.INSTANCE,FilterTableScanRule.INSTANCE,ProjectToWindowRule.PROJECT, ProjectJoinTransposeRule.INSTANCE,JoinProjectTransposeRule.BOTH_PROJECT,ProjectTableScanRule.INSTANCE,ProjectFilterTransposeRule.INSTANCE))
+		        .programs(program)		        		        
 		        .build();
 		    		   
 		    this.planner = Frameworks.getPlanner(config);
