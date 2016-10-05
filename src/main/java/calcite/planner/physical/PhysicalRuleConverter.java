@@ -54,10 +54,10 @@ public class PhysicalRuleConverter {
 				String temps[] = temp.split(", ");
 				schema = temps[0];
 				table = temps[1];
-            	args.add("--schema");
-            	args.add(schema);
-            	args.add("--table");
-            	args.add(table);
+            			args.add("--schema");
+            			args.add(schema);
+            			args.add("--table");
+            			args.add(table);
 			} else{
 				temp = operator.substring(0,operator.indexOf("L"));
 				whiteSpaces = temp.length();
@@ -77,27 +77,27 @@ public class PhysicalRuleConverter {
 	    	/* Transformation from relational operators to physical => */ 
 		
 		/* Setting up the input schema and the input data of Saber */
-    	SaberSchema s = new SaberSchema(4);
-    	ITupleSchema orders = s.createTable(); //column references have +1 value !!
-    	orders.setAttributeName(1, "orderid");
-    	orders.setAttributeName(2, "productid");
-    	orders.setAttributeName(3, "units");
-    	orders.setAttributeName(4, "customerid");
+		SaberSchema s = new SaberSchema(4);
+		ITupleSchema orders = s.createTable(); //column references have +1 value !!
+		orders.setAttributeName(1, "orderid");
+		orders.setAttributeName(2, "productid");
+		orders.setAttributeName(3, "units");
+		orders.setAttributeName(4, "customerid");
 
-    	Pair<byte [],ByteBuffer> mockData = s.fillTable(orders);
-    	byte [] data = mockData.left;
-    	ByteBuffer b = mockData.right; 
-    	
-    	SaberSchema s1 = new SaberSchema(2);
-    	ITupleSchema products = s1.createTable(); //column references have +1 value !!
-    	products.setAttributeName(1, "productid");
-    	products.setAttributeName(2, "description");	    
+		Pair<byte [],ByteBuffer> mockData = s.fillTable(orders);
+		byte [] data = mockData.left;
+		ByteBuffer b = mockData.right; 
 
-    	Pair<byte [],ByteBuffer> mockData1 = s1.fillTable(products);
-    	byte [] data1 = mockData1.left;
-    	ByteBuffer b1 = mockData1.right; 
+		SaberSchema s1 = new SaberSchema(2);
+		ITupleSchema products = s1.createTable(); //column references have +1 value !!
+		products.setAttributeName(1, "productid");
+		products.setAttributeName(2, "description");	    
+
+		Pair<byte [],ByteBuffer> mockData1 = s1.fillTable(products);
+		byte [] data1 = mockData1.left;
+		ByteBuffer b1 = mockData1.right; 
     
-    	/* Map  used for building  the query. It matches calcite's schemas with saber's.*/
+    		/* Map  used for building  the query. It matches calcite's schemas with saber's.*/
 		Map<String, Pair<ITupleSchema,byte []>> tableMap = new HashMap<String, Pair <ITupleSchema,byte []>>();
 		tableMap.put("s.orders", new Pair <ITupleSchema,byte []>(orders,data));
 		tableMap.put("s.products", new Pair <ITupleSchema,byte []>(products,data1));
@@ -128,9 +128,9 @@ public class PhysicalRuleConverter {
 						"." + po.right.get(po.right.indexOf("--table") +1);
 				Pair<ITupleSchema,byte []> pair = tableMap.get(tableKey);
 				operation = new RuleAssembler(po.left, po.right, pair.left);	    
-			    rule = operation.construct();
-			    query = rule.getQuery();
-			    outputSchema = rule.getOutputSchema();			    
+			    	rule = operation.construct();
+			    	query = rule.getQuery();
+			    	outputSchema = rule.getOutputSchema();			    
 				queryId--;
 
 				if (!(chain == null)){
@@ -150,7 +150,7 @@ public class PhysicalRuleConverter {
 			    
 			} else					
 			if (query==null) {
-				ITupleSchema inputSchema = outputSchema;
+			    ITupleSchema inputSchema = outputSchema;
 			    operation = new RuleAssembler(po.left, po.right, inputSchema);
 			    rule = operation.construct();
 			    query = rule.getQuery();
@@ -176,11 +176,11 @@ public class PhysicalRuleConverter {
 			    //aggregates.add(rule);
 			}
 			queryId++;
-		    System.out.println("OutputSchema : " + outputSchema.getSchema());
+		    	System.out.println("OutputSchema : " + outputSchema.getSchema());
 		    if (!(po.left.equals("LogicalTableScan"))){
 		    	System.out.println("Query id : "+ query.getName());
 		    }
-			System.out.println();
+		    System.out.println();
 		}
 		chains.add(chain);
 				
