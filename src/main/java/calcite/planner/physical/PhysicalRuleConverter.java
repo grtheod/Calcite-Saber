@@ -38,7 +38,31 @@ public class PhysicalRuleConverter {
 	public void convert () {
 		
 		log.info("Convert logical plan");
-		log.info("Root is " + logicalPlan.toString());
+		log.info(String.format("Root is %s", logicalPlan.toString()));
+		
+		List<RelNode> inputs = logicalPlan.getInputs();
+		log.info(String.format("Root has %d inputs", inputs.size()));
+		
+		/*
+		 * Finds a chain of operators that finishes at the current root.
+		 * 
+		 * If children.size() == 2 (and no greater), then when the chain
+		 * is broken `chainTail` node should be a join operator. 
+		 */
+		
+		RelNode chainTail = logicalPlan;
+		while (true) {
+			
+			log.info(String.format("Node %2d is %s", chainTail.getId(), chainTail.toString()));
+			
+			List<RelNode> children = chainTail.getInputs();
+			if (children.size() > 0 && children.size() < 2)
+				chainTail = children.get(0);
+			else {
+				log.info ("Broken chain");
+				break;
+			}
+		}
 	}
 	
 	public void execute () {
