@@ -1,0 +1,11 @@
+.settings
+.project
+.classpath
+*.o
+*.so
+*.out
+*.txt
+*.log
+*.dSYM/
+*.metadata
+/target/
