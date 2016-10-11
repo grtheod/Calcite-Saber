@@ -26,11 +26,12 @@ public class PhysicalRuleConverter {
 	
 	RelNode logicalPlan;
 	
-	public PhysicalRuleConverter(RelNode logicalPlan){
+	public PhysicalRuleConverter (RelNode logicalPlan) {
+		
 		this.logicalPlan=logicalPlan;
 	}
 	
-	public void execute() {
+	public void execute () {
 		
 		/* Create a list of logical operators for a given plan*/
 		String operators[] = RelOptUtil.toString(logicalPlan).split("\\r?\\n");

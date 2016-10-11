@@ -36,31 +36,68 @@ import uk.ac.imperial.lsds.saber.ITupleSchema;
 public class Tester {
 
 	public static void main(String[] args) throws Exception {
-		// TODO Auto-generated method stub
-	    Class.forName("org.apache.calcite.jdbc.Driver");
-	    Connection connection =
-	        DriverManager.getConnection("jdbc:calcite:");
-	    CalciteConnection calciteConnection =
-	        connection.unwrap(CalciteConnection.class);
-	    SchemaPlus rootSchema = calciteConnection.getRootSchema();
-	    SchemaPlus schema = rootSchema.add("s", new AbstractSchema());	    	   	    
-	    schema.add("orders", new OrdersTableFactory().create(schema, "orders", null, null));
-	    schema.add("products", new ProductsTableFactory().create(schema, "products", null, null));
-	    schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));	    	  
-	    
-	    Statement statement = connection.createStatement();
-	    QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
-	    	    	   	  	    
-	    RelNode logicalPlan = queryPlanner.getLogicalPlan("select productid, sum(units) from s.orders where units>5 group by productid");
-	    		//+ "select productid,count(*),sum(units) from s.orders"
-	    		//+ " where units > 5 group by productid  ");	 //and s.orders.units = 5   
-	    //(18 > 5) and((s.orders.units > 5 and (1 > 4) and (3 = 4)) or (1>0))
-	    System.out.println(RelOptUtil.toString(logicalPlan,SqlExplainLevel.EXPPLAN_ATTRIBUTES));
-	    	    
-	    
-	    PhysicalRuleConverter physicalPlan = new  PhysicalRuleConverter(logicalPlan);
-	    physicalPlan.execute();
-	    
-	}
 
+		Class.forName("org.apache.calcite.jdbc.Driver");
+
+		Connection connection = DriverManager.getConnection("jdbc:calcite:");
+		CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
+		
+		SchemaPlus rootSchema = calciteConnection.getRootSchema();
+		
+		SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
+		
+		schema.add("orders",   new     OrdersTableFactory().create(schema,    "orders", null, null));
+		schema.add("products", new   ProductsTableFactory().create(schema,  "products", null, null));
+		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));
+		
+		Statement statement = connection.createStatement();
+		
+		QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
+		
+		RelNode logicalPlan = queryPlanner.getLogicalPlan (
+				
+				  "select productid, sum(units) "
+				+ "from s.orders "
+				+ "where units > 5 "
+				+ "group by productid"
+				);
+		
+		// + "select productid,count(*),sum(units) from s.orders"
+		// + " where units > 5 group by productid  "); //and s.orders.units = 5
+		// (18 > 5) and((s.orders.units > 5 and (1 > 4) and (3 = 4)) or (1>0))
+		
+		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
+		
+		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan);
+		
+		physicalPlan.execute();
+		
+		/*
+		 * Notes:
+		 * 
+		 * main () {
+		 * 		
+		 * 		schema = ...
+		 * 		query = "select..."
+		 * 		
+		 * 		QueryPlanner planner = new QueryPlanner (schema)
+		 * 		RelNode logicalPlanRoot = planner.getLogicalPlan (query);
+		 * 		
+		 * 		PhysicalRuleConverter converter = new PhysicalRuleConverter (logicalPlanRoot);
+		 * 		QueryApplication saberApp = converter.convert ();
+		 * 		
+		 * 		RamdomDataGenerator generator = new RamdomDataGenerator ()
+		 * 			.setSchema (schema)
+		 * 			.setBundleSize(1024)
+		 * 			...
+		 * 		
+		 * 		// Set any system configuration parameters
+		 * 		saberApp.init ();
+		 * 		
+		 * 		while (true) {
+		 * 			saberApp.processData (generator.nextBundle())
+		 * 		}
+		 * }
+		 */
+	}
 }
