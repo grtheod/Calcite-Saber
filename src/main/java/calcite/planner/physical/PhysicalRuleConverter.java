@@ -13,6 +13,8 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import calcite.utils.SaberSchema;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
@@ -24,11 +26,19 @@ import uk.ac.imperial.lsds.saber.cql.operators.IAggregateOperator;
 
 public class PhysicalRuleConverter {
 	
-	RelNode logicalPlan;
+	private final static Logger log = LogManager.getLogger (PhysicalRuleConverter.class);
+	
+	private RelNode logicalPlan;
 	
 	public PhysicalRuleConverter (RelNode logicalPlan) {
 		
-		this.logicalPlan=logicalPlan;
+		this.logicalPlan = logicalPlan;
+	}
+	
+	public void convert () {
+		
+		log.info("Convert logical plan");
+		log.info("Root is " + logicalPlan.toString());
 	}
 	
 	public void execute () {
@@ -224,8 +234,5 @@ public class PhysicalRuleConverter {
 			e.printStackTrace(); 
 			System.exit(1);
 		}		
-	    
 	}
-
-	
 }

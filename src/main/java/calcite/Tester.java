@@ -70,7 +70,10 @@ public class Tester {
 		
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan);
 		
-		physicalPlan.execute();
+		// Commented out for now
+		// physicalPlan.execute();
+		
+		physicalPlan.convert ();
 		
 		/*
 		 * Notes:
