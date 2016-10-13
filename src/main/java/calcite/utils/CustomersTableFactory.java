@@ -56,7 +56,7 @@ public class CustomersTableFactory implements TableFactory<Table>  {
 			public RelDataType apply(RelDataTypeFactory a0) {
 		        return a0.builder()
 		            .add("customerid", SqlTypeName.INTEGER)
-		            .add("phone", SqlTypeName.INTEGER)
+		            .add("phone", SqlTypeName.BIGINT)
 		            .build();
 			}
 		};

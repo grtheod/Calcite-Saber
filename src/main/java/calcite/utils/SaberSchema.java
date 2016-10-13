@@ -23,13 +23,20 @@ public class SaberSchema {
 		int i;
 		for (i = 1; i < numberOfAttributes + 1; i++) {
 			offsets[i] = tupleSize;
-			tupleSize += 4;
+			if (fields.get(i-1).getType().toString().equals("BIGINT")) 
+				tupleSize += 8;
+			else
+				tupleSize += 4;
 		}
 		
-		/*Only the first column is set as LONG. I should fix it.*/
+		
 		ITupleSchema schema = new TupleSchema (offsets, tupleSize);
 		schema.setAttributeType(0,  PrimitiveType.LONG);
 		for (i = 1; i < numberOfAttributes + 1; i++) {
+			if (fields.get(i-1).getType().toString().equals("BIGINT")) {
+				schema.setAttributeType(i, PrimitiveType.LONG);
+				schema.setAttributeName(i, fields.get(i-1).getName());
+			} else
 			if (fields.get(i-1).getType().toString().equals("FLOAT")) {
 				schema.setAttributeType(i, PrimitiveType.FLOAT);
 				schema.setAttributeName(i, fields.get(i-1).getName());
@@ -47,17 +54,22 @@ public class SaberSchema {
 		
 		int tupleSize = schema.getTupleSize();
 		int numberOfAttributes = schema.numberOfAttributes() - 1;
-		//System.out.println("tupleSize = "+tupleSize);
 		byte [] data = new byte [tupleSize * tuplesPerInsert];
 		
 		ByteBuffer b = ByteBuffer.wrap(data);
 		/* Fill the buffer */
-		int number = 0;
 		while (b.hasRemaining()) {
 			b.putLong (1);
-			for (int i = 0; i < numberOfAttributes; i ++)
-				//number = (int) (Math.random() * 10 + 1);				
-				b.putInt(1);
+			for (int i = 0; i < numberOfAttributes; i ++) {
+				
+				if (schema.getAttributeType(i + 1).equals(PrimitiveType.LONG)) 
+					b.putLong (1);
+				else
+				if (schema.getAttributeType(i + 1).equals(PrimitiveType.FLOAT)) 
+					b.putFloat (1);
+				else  
+					b.putInt(1);
+			}
 				b.put(schema.getPad());
 		}
 		
