@@ -9,6 +9,14 @@ maven repositories.
 
 Orders Schema
 -------------------------
-timestamp(long) | orderid(int) | productid(int) | units(int) 
+timestamp(long) | orderid(int) | productid(int) | units(int) | costumerid(int)
+
+Products Schema
+-------------------------
+timestamp(long) | productid(int) | description(int) 
+
+Customers Schema
+-------------------------
+timestamp(long) | customerid(int) | phone(int) 
 
 
