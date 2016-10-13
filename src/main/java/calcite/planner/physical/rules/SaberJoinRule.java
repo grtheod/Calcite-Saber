@@ -1,5 +1,5 @@
 package calcite.planner.physical.rules;
-import java.nio.ByteBuffer;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -8,14 +8,9 @@ import java.util.Set;
 import calcite.planner.physical.SaberRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
-import uk.ac.imperial.lsds.saber.QueryApplication;
 import uk.ac.imperial.lsds.saber.QueryConf;
 import uk.ac.imperial.lsds.saber.QueryOperator;
-import uk.ac.imperial.lsds.saber.SystemConf;
-import uk.ac.imperial.lsds.saber.TupleSchema;
-import uk.ac.imperial.lsds.saber.Utils;
 import uk.ac.imperial.lsds.saber.WindowDefinition;
-import uk.ac.imperial.lsds.saber.TupleSchema.PrimitiveType;
 import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntConstant;
@@ -54,8 +49,7 @@ public class SaberJoinRule implements SaberRule{
 	}
 	
 	public Query ThetaJoinWithoutPredicated (){
-		String executionMode = "cpu";
-		int numberOfThreads = 1;
+
 		int batchSize = 1048576;
 		WindowType windowType1 = WindowType.ROW_BASED;
 		int windowRange1 = 1;
@@ -66,11 +60,8 @@ public class SaberJoinRule implements SaberRule{
 		int windowSlide2 = 1;
 		int numberOfAttributes2 = 6;
 		int comparisons = 1;
-		int tuplesPerInsert = 128;
 		int queryId = 0;
 		String operands = null;
-		String stringSchema = null;
-		String table = null;
 		long timestampReference = 0;
 		
 		/* Parse command line arguments */
@@ -80,12 +71,6 @@ public class SaberJoinRule implements SaberRule{
 				System.err.println(usage);
 				System.exit(1);
 			}
-			if (args.get(i).equals("--mode")) { 
-				executionMode = args.get(j);
-			} else
-			if (args.get(i).equals("--threads")) {
-				numberOfThreads = Integer.parseInt(args.get(j));
-			} else
 			if (args.get(i).equals("--batch-size")) { 
 				batchSize = Integer.parseInt(args.get(j));
 			} else
@@ -116,55 +101,24 @@ public class SaberJoinRule implements SaberRule{
 			if (args.get(i).equals("--comparisons")) { 
 				comparisons = Integer.parseInt(args.get(j));
 			} else
-			if (args.get(i).equals("--tuples-per-insert")) { 
-				tuplesPerInsert = Integer.parseInt(args.get(j));
-			} else
 			if (args.get(i).equals("--operands")) {
 				operands = args.get(j);
-			} else
-			if (args.get(i).equals("--schema")) {
-				stringSchema = args.get(j);
-			} else
-			if (args.get(i).equals("--table")) {
-				table = args.get(j);
 			} else
 			if (args.get(i).equals("--queryId")) {
 				queryId = Integer.parseInt(args.get(j));
 			} else
 			if (args.get(i).equals("--timestampReference")) {
 				timestampReference = Long.parseLong(args.get(j));
-			} else {
-				System.err.println(String.format("error: unknown flag %s %s", args.get(i), args.get(j)));
-				System.exit(1);
-			}
+			} 
 			i = j + 1;
 		}
-		
-		SystemConf.CPU = false;
-		SystemConf.GPU = false;
-		
-		if (executionMode.toLowerCase().contains("cpu") || executionMode.toLowerCase().contains("hybrid"))
-			SystemConf.CPU = true;
-		
-		if (executionMode.toLowerCase().contains("gpu") || executionMode.toLowerCase().contains("hybrid"))
-			SystemConf.GPU = true;
-		
-		SystemConf.HYBRID = SystemConf.CPU && SystemConf.GPU;
-		
-		SystemConf.THREADS = numberOfThreads;
 		
 		QueryConf queryConf = new QueryConf (batchSize);
 		
 		WindowDefinition window1 = new WindowDefinition (windowType1, windowRange1, windowSlide1);
-		
-		/* Reset tuple size */
-		int tupleSize1 = schema1.getTupleSize();
-		
+				
 		WindowDefinition window2 = new WindowDefinition (windowType2, windowRange2, windowSlide2);
-		
-		/* Reset tuple size */
-		int tupleSize2 = schema2.getTupleSize();
-		
+				
 		IPredicate predicate = getJoinCondition(operands);
 		
 		cpuCode = new ThetaJoin (schema1, schema2, predicate);

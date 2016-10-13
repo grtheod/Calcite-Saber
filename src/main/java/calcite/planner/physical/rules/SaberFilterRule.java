@@ -59,18 +59,11 @@ public class SaberFilterRule implements SaberRule {
 	
 	public void prepareRule() {
 	
-		String executionMode = "cpu";
-		int numberOfThreads = 1;
 		int batchSize = 1048576;
 		WindowType windowType = WindowType.ROW_BASED;
 		int windowRange = 1;
 		int windowSlide = 1;
-		int numberOfAttributes = 6;
-		int comparisons = 1;
-		int tuplesPerInsert = 32768;
 		String operands = null;
-		String stringSchema = null;
-		String table = null;
 		int queryId = 0;
 		long timestampReference = 0;
 		
@@ -80,12 +73,6 @@ public class SaberFilterRule implements SaberRule {
 			if ((j = i + 1) == args.size()) {
 				System.err.println(usage);
 				System.exit(1);
-			}
-			if (args.get(i).equals("--mode")) { 
-				executionMode = args.get(j);
-			} else
-			if (args.get(i).equals("--threads")) {
-				numberOfThreads = Integer.parseInt(args.get(j));
 			} else
 			if (args.get(i).equals("--batch-size")) { 
 				batchSize = Integer.parseInt(args.get(j));
@@ -99,64 +86,22 @@ public class SaberFilterRule implements SaberRule {
 			if (args.get(i).equals("--window-slide")) { 
 				windowSlide = Integer.parseInt(args.get(j));
 			} else
-			if (args.get(i).equals("--input-attributes")) { 
-				numberOfAttributes = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--comparisons")) { 
-				comparisons = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--tuples-per-insert")) { 
-				tuplesPerInsert = Integer.parseInt(args.get(j));
-			} else
 			if (args.get(i).equals("--operands")) {
 				operands = args.get(j);
-			} else
-			if (args.get(i).equals("--schema")) {
-				stringSchema = args.get(j);
-			} else
-			if (args.get(i).equals("--table")) {
-				table = args.get(j);
 			} else
 			if (args.get(i).equals("--queryId")) {
 				queryId = Integer.parseInt(args.get(j));
 			} else
 			if (args.get(i).equals("--timestampReference")) {
 				timestampReference = Long.parseLong(args.get(j));
-			} else
-			if (args.get(i).equals("--whitespaces")) {
-					
-			} else {
-				System.err.println(String.format("error: unknown flag %s %s", args.get(i), args.get(j)));
-				System.exit(1);
-			}
+			} 			
 			i = j + 1;
 		}
-		
-		SystemConf.CIRCULAR_BUFFER_SIZE = 32 * 1048576; //maybe change the size??
-		SystemConf.LATENCY_ON = false;
-		
-		SystemConf.PARTIAL_WINDOWS = 0;
-		
-		SystemConf.CPU = false;
-		SystemConf.GPU = false;
-		
-		if (executionMode.toLowerCase().contains("cpu") || executionMode.toLowerCase().contains("hybrid"))
-			SystemConf.CPU = true;
-		
-		if (executionMode.toLowerCase().contains("gpu") || executionMode.toLowerCase().contains("hybrid"))
-			SystemConf.GPU = true;
-		
-		SystemConf.HYBRID = SystemConf.CPU && SystemConf.GPU;
-		
-		SystemConf.THREADS = numberOfThreads;
-		
+				
 		QueryConf queryConf = new QueryConf (batchSize);
 		
 		WindowDefinition window = new WindowDefinition (windowType, windowRange, windowSlide);
 		
-		/* Reset tuple size */
-		int tupleSize = schema.getTupleSize();
-
 		IPredicate predicate =  getFilterCondition(operands);
 		
 		cpuCode = new Selection (predicate);

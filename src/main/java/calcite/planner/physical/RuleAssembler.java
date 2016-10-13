@@ -10,6 +10,7 @@ import calcite.planner.physical.rules.SaberProjectRule;
 import calcite.planner.physical.rules.SaberScanRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
+import uk.ac.imperial.lsds.saber.SystemConf;
 
 public class RuleAssembler {
 	

@@ -50,21 +50,15 @@ public class SaberProjectRule implements SaberRule {
 	
 	public void prepareRule() {
 	
-		String executionMode = "cpu";
-		int numberOfThreads = 15;
 		int batchSize = 1048576;
 		WindowType windowType = WindowType.ROW_BASED;
 		int windowRange = 1;
 		int windowSlide = 1;
-		int numberOfAttributes = 6;
-		int projectedAttributes = 1;
-		int expressionDepth = 1;
-		int tuplesPerInsert = 32768;
 		String operands = null;
-		String stringSchema = null;
-		String table = null;
 		int queryId = 0;
 		long timestampReference = 0;
+		int projectedAttributes = 0;
+		int expressionDepth = 1;
 		
 		/* Parse command line arguments */
 		int i, j;
@@ -73,12 +67,6 @@ public class SaberProjectRule implements SaberRule {
 				System.err.println(usage);
 				System.exit(1);
 			}
-			if (args.get(i).equals("--mode")) { 
-				executionMode = args.get(j);
-			} else
-			if (args.get(i).equals("--threads")) {
-				numberOfThreads = Integer.parseInt(args.get(j));
-			} else
 			if (args.get(i).equals("--batch-size")) { 
 				batchSize = Integer.parseInt(args.get(j));
 			} else
@@ -91,26 +79,8 @@ public class SaberProjectRule implements SaberRule {
 			if (args.get(i).equals("--window-slide")) { 
 				windowSlide = Integer.parseInt(args.get(j));
 			} else
-			if (args.get(i).equals("--input-attributes")) { 
-				numberOfAttributes = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--projected-attributes")) { 
-				projectedAttributes = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--depth")) { 
-				expressionDepth = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--tuples-per-insert")) { 
-				tuplesPerInsert = Integer.parseInt(args.get(j));
-			} else
 			if (args.get(i).equals("--operands")) {
 				operands = args.get(j);
-			} else
-			if (args.get(i).equals("--schema")) {
-				stringSchema = args.get(j);
-			} else
-			if (args.get(i).equals("--table")) {
-				table = args.get(j);
 			} else
 			if (args.get(i).equals("--queryId")) {
 				queryId = Integer.parseInt(args.get(j));
@@ -118,38 +88,16 @@ public class SaberProjectRule implements SaberRule {
 			if (args.get(i).equals("--timestampReference")) {
 				timestampReference = Long.parseLong(args.get(j));
 			} else
-			if (args.get(i).equals("--whitespaces")) {
-					
-			} else {
-				System.err.println(String.format("error: unknown flag %s %s", args.get(i), args.get(j)));
-				System.exit(1);
+			if (args.get(i).equals("--depth")) { 
+					expressionDepth = Integer.parseInt(args.get(j));
 			}
 			i = j + 1;
 		}
 		
-		SystemConf.CIRCULAR_BUFFER_SIZE = 32 * 1048576;
-		SystemConf.LATENCY_ON = false;
-		
-		SystemConf.CPU = false;
-		SystemConf.GPU = false;
-		
-		if (executionMode.toLowerCase().contains("cpu") || executionMode.toLowerCase().contains("hybrid"))
-			SystemConf.CPU = true;
-		
-		if (executionMode.toLowerCase().contains("gpu") || executionMode.toLowerCase().contains("hybrid"))
-			SystemConf.GPU = true;
-		
-		SystemConf.HYBRID = SystemConf.CPU && SystemConf.GPU;
-		
-		SystemConf.THREADS = numberOfThreads;
-		
 		QueryConf queryConf = new QueryConf (batchSize);
 		
 		WindowDefinition window = new WindowDefinition (windowType, windowRange, windowSlide);
-		
-		/* Reset tuple size */
-		int tupleSize = schema.getTupleSize();
-		
+				
 		List <Pair<String,String>> projectedColumns = getProjectedColumns(operands);
 		projectedAttributes = projectedColumns.size();
 		

@@ -58,21 +58,13 @@ public class SaberAggregateRule implements SaberRule{
 	
 	public void prepareRule() {
 	
-		String executionMode = "cpu";
-		int numberOfThreads = 1;
 		int batchSize = 1048576;
 		WindowType windowType = WindowType.ROW_BASED;
 		int windowRange = 1024;
 		int windowSlide = 1024;
-		int numberOfAttributes = 6;
-		String aggregateExpression = "cnt,sum";
-		int numberOfGroups = 0;
-		int tuplesPerInsert = 32768;
 		String operands = null;
-		String stringSchema = null;
-		String table = null;
-		int queryId = 0;
 		long timestampReference = 0;
+		int queryId = 0;
 		 
 		/* Parse command line arguments */
 		int i, j;
@@ -80,12 +72,6 @@ public class SaberAggregateRule implements SaberRule{
 			if ((j = i + 1) == args.size()) {
 				System.err.println(usage);
 				System.exit(1);
-			}
-			if (args.get(i).equals("--mode")) { 
-				executionMode = args.get(j);
-			} else
-			if (args.get(i).equals("--threads")) {
-				numberOfThreads = Integer.parseInt(args.get(j));
 			} else
 			if (args.get(i).equals("--batch-size")) { 
 				batchSize = Integer.parseInt(args.get(j));
@@ -99,75 +85,21 @@ public class SaberAggregateRule implements SaberRule{
 			if (args.get(i).equals("--window-slide")) { 
 				windowSlide = Integer.parseInt(args.get(j));
 			} else
-			if (args.get(i).equals("--input-attributes")) { 
-				numberOfAttributes = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--aggregate-expression")) { 
-				aggregateExpression = args.get(j);
-			} else
-			if (args.get(i).equals("--groups")) { 
-				numberOfGroups = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--tuples-per-insert")) { 
-				tuplesPerInsert = Integer.parseInt(args.get(j));
-			} else
 			if (args.get(i).equals("--operands")) {
 				operands = args.get(j);
-			} else
-			if (args.get(i).equals("--schema")) {
-				stringSchema = args.get(j);
-			} else
-			if (args.get(i).equals("--table")) {
-				table = args.get(j);
 			} else
 			if (args.get(i).equals("--queryId")) {
 				queryId = Integer.parseInt(args.get(j));
 			} else
 			if (args.get(i).equals("--timestampReference")) {
 				timestampReference = Long.parseLong(args.get(j));
-			} else
-			if (args.get(i).equals("--whitespaces")) {
-					
-			} else {
-				System.err.println(String.format("error: unknown flag %s %s", args.get(i), args.get(j)));
-				System.exit(1);
-			}
+			} 
 			i = j + 1;
-
 		}
-
-		SystemConf.CIRCULAR_BUFFER_SIZE = 32 * 1048576; //maybe change the size
-		SystemConf.LATENCY_ON = false;
-		
-		SystemConf.SCHEDULING_POLICY = SystemConf.SchedulingPolicy.HLS;
-		SystemConf.SWITCH_THRESHOLD = 10;
-		
-		SystemConf.THROUGHPUT_MONITOR_INTERVAL = 1000L;
-		
-		SystemConf.PARTIAL_WINDOWS = 64; // 32768;
-		SystemConf.HASH_TABLE_SIZE = 32768;
-		
-		SystemConf.UNBOUNDED_BUFFER_SIZE = 2 * 1048576;
-		
-		SystemConf.CPU = false;
-		SystemConf.GPU = false;
-		
-		if (executionMode.toLowerCase().contains("cpu") || executionMode.toLowerCase().contains("hybrid"))
-			SystemConf.CPU = true;
-		
-		if (executionMode.toLowerCase().contains("gpu") || executionMode.toLowerCase().contains("hybrid"))
-			SystemConf.GPU = true;
-		
-		SystemConf.HYBRID = SystemConf.CPU && SystemConf.GPU;
-		
-		SystemConf.THREADS = numberOfThreads;
 		
 		QueryConf queryConf = new QueryConf (batchSize);
 		
-		WindowDefinition window = new WindowDefinition (windowType, windowRange, windowSlide);
-		
-		/* Reset tuple size */
-		int tupleSize = schema.getTupleSize();
+		WindowDefinition window = new WindowDefinition (windowType, windowRange, windowSlide);		
 		
 		Pair<AggregationType [],FloatColumnReference []>  aggr = getAggregationTypesAndAttributes(operands);
 		AggregationType [] aggregationTypes = aggr.left;
@@ -177,7 +109,7 @@ public class SaberAggregateRule implements SaberRule{
 		
 		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, groupByAttributes);
 		System.out.println(cpuCode);
-		if (numberOfGroups == 0)
+		if (groupByAttributes != null) /*check if it works*/
 			gpuCode = new ReductionKernel (window, aggregationTypes, aggregationAttributes, schema, batchSize);
 		else
 			gpuCode = new AggregationKernel (window, aggregationTypes, aggregationAttributes, groupByAttributes, schema, batchSize);
@@ -250,7 +182,7 @@ public class SaberAggregateRule implements SaberRule{
 
 	/* Get the group by attributes*/
 	private Expression[] getGroupByAttributes(String operands) {
-		Expression [] groupByAttributes = new Expression[0];
+		Expression [] groupByAttributes = null;
 		String groupAttrs = operands.substring(operands.indexOf("{")+1, operands.indexOf("}")).trim();
 
 		if (!(groupAttrs.equals(" ")) && !(groupAttrs.equals(""))){

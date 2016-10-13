@@ -29,10 +29,14 @@ public class PhysicalRuleConverter {
 	private final static Logger log = LogManager.getLogger (PhysicalRuleConverter.class);
 	
 	private RelNode logicalPlan;
+	private Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap;
+	private SystemConf systemConf;
 	
-	public PhysicalRuleConverter (RelNode logicalPlan) {
+	public PhysicalRuleConverter (RelNode logicalPlan, Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap , SystemConf systemConf) {
 		
 		this.logicalPlan = logicalPlan;
+		this.tablesMap = tablesMap;
+		this.systemConf = systemConf;
 	}
 	
 	public void convert () {
@@ -89,10 +93,10 @@ public class PhysicalRuleConverter {
 				String temps[] = temp.split(", ");
 				schema = temps[0];
 				table = temps[1];
-            			args.add("--schema");
-            			args.add(schema);
-            			args.add("--table");
-            			args.add(table);
+            	args.add("--schema");
+            	args.add(schema);
+            	args.add("--table");
+            	args.add(table);
 			} else{
 				temp = operator.substring(0,operator.indexOf("L"));
 				whiteSpaces = temp.length();
@@ -110,33 +114,7 @@ public class PhysicalRuleConverter {
 		
 		System.out.println("---------------------------------------------");
 	    	/* Transformation from relational operators to physical => */ 
-		
-		/* Setting up the input schema and the input data of Saber */
-		SaberSchema s = new SaberSchema(4);
-		ITupleSchema orders = s.createTable(); //column references have +1 value !!
-		orders.setAttributeName(1, "orderid");
-		orders.setAttributeName(2, "productid");
-		orders.setAttributeName(3, "units");
-		orders.setAttributeName(4, "customerid");
-
-		Pair<byte [],ByteBuffer> mockData = s.fillTable(orders);
-		byte [] data = mockData.left;
-		ByteBuffer b = mockData.right; 
-
-		SaberSchema s1 = new SaberSchema(2);
-		ITupleSchema products = s1.createTable(); //column references have +1 value !!
-		products.setAttributeName(1, "productid");
-		products.setAttributeName(2, "description");	    
-
-		Pair<byte [],ByteBuffer> mockData1 = s1.fillTable(products);
-		byte [] data1 = mockData1.left;
-		ByteBuffer b1 = mockData1.right; 
-    
-    		/* Map  used for building  the query. It matches calcite's schemas with saber's.*/
-		Map<String, Pair<ITupleSchema,byte []>> tableMap = new HashMap<String, Pair <ITupleSchema,byte []>>();
-		tableMap.put("s.orders", new Pair <ITupleSchema,byte []>(orders,data));
-		tableMap.put("s.products", new Pair <ITupleSchema,byte []>(products,data1));
-		
+				
 		/*  Creating a single chain of queries. For complex queries that use JOIN
 		 *  we have to create multiple chains and join them. */	    
 		RuleAssembler operation;
@@ -161,18 +139,18 @@ public class PhysicalRuleConverter {
 			if (po.left.equals("LogicalTableScan")){
 				String tableKey = po.right.get(po.right.indexOf("--schema") +1) + 
 						"." + po.right.get(po.right.indexOf("--table") +1);
-				Pair<ITupleSchema,byte []> pair = tableMap.get(tableKey);
+				Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
 				operation = new RuleAssembler(po.left, po.right, pair.left);	    
-			    	rule = operation.construct();
-			    	query = rule.getQuery();
-			    	outputSchema = rule.getOutputSchema();			    
+			    rule = operation.construct();
+			    query = rule.getQuery();
+			    outputSchema = rule.getOutputSchema();			    
 				queryId--;
 
 				if (!(chain == null)){
 					chains.add(chain);
 				}
 				int wS = Integer.parseInt(po.right.get( po.right.indexOf("--whitespaces") +1));
-				chain = new ChainOfRules(wS,query,outputSchema,pair.right,false);
+				chain = new ChainOfRules(wS,query,outputSchema,pair.right.left,false);
 			} else
 			if (po.left.equals("LogicalJoin")) {
 				
@@ -225,18 +203,17 @@ public class PhysicalRuleConverter {
 		/* The path is query -> dispatcher -> handler -> aggregator */
 		/* I am not sure of this : */
 		for ( SaberRule agg : aggregates){
-			if (SystemConf.CPU)
+			if (systemConf.CPU)
 				agg.getQuery().setAggregateOperator((IAggregateOperator) agg.getCpuCode());
 			else
 				agg.getQuery().setAggregateOperator((IAggregateOperator) agg.getGpuCode());
 		}
 		
-		/* Execute the query. */
-		SystemConf.LATENCY_ON = false;		
-		if (SystemConf.LATENCY_ON) {
+		/* Execute the query. */	
+		if (systemConf.LATENCY_ON) {
 			long systemTimestamp = (System.nanoTime() - timestampReference) / 1000L; /* usec */
-			long packedTimestamp = Utils.pack(systemTimestamp, b.getLong(0));
-			b.putLong(0, packedTimestamp);
+			//long packedTimestamp = Utils.pack(systemTimestamp, b.getLong(0));
+			//b.putLong(0, packedTimestamp);
 		}
 		
 		try {
@@ -251,8 +228,9 @@ public class PhysicalRuleConverter {
 					}
 					
 				}
-				if (SystemConf.LATENCY_ON)
-					b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1L));
+				if (systemConf.LATENCY_ON){
+					//b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1L));
+				}
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 
