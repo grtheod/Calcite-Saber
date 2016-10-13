@@ -93,10 +93,10 @@ public class PhysicalRuleConverter {
 				String temps[] = temp.split(", ");
 				schema = temps[0];
 				table = temps[1];
-            	args.add("--schema");
-            	args.add(schema);
-            	args.add("--table");
-            	args.add(table);
+            			args.add("--schema");
+            			args.add(schema);
+            			args.add("--table");
+            			args.add(table);
 			} else{
 				temp = operator.substring(0,operator.indexOf("L"));
 				whiteSpaces = temp.length();
