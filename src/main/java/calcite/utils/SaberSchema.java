@@ -70,7 +70,7 @@ public class SaberSchema {
 				else  
 					b.putInt(1);
 			}
-				b.put(schema.getPad());
+			b.put(schema.getPad());
 		}
 		
 		return new Pair<byte [],ByteBuffer>(data,b);		
