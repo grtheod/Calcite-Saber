@@ -82,9 +82,9 @@ public class PhysicalRuleConverter {
 			String tableKey = chainTail.getTable().getQualifiedName().toString().replace("[", "").replace("]", "").replace(", ", ".");
 			Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
 			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), null, pair.left, chainTail.getId(), timestampReference);	    
-		    SaberRule rule = operation.construct();
-		    Query query = rule.getQuery();
-		    ITupleSchema outputSchema = rule.getOutputSchema();
+		    	SaberRule rule = operation.construct();
+		    	Query query = rule.getQuery();
+		    	ITupleSchema outputSchema = rule.getOutputSchema();
 			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,pair.right.left,false,false));
 			System.out.println("OutputSchema : " + outputSchema.getSchema());
 			
@@ -115,23 +115,23 @@ public class PhysicalRuleConverter {
 			}
 			
 			ChainOfRules chain = chains.get(node.left);
-		    RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, chain.getOutputSchema(), queryId, timestampReference);
-		    SaberRule rule = operation.construct();
+		    	RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, chain.getOutputSchema(), queryId, timestampReference);
+		    	SaberRule rule = operation.construct();
 		    
 			if (logicalPlan.getRelTypeName().equals("LogicalAggregate")) {
 				aggregates.add(rule);
 			}
 		    
-		    Query query = rule.getQuery();
+		    	Query query = rule.getQuery();
 			System.out.println("Current query id : "+ query.getId());
-		    queryId++; //increment the queryId for the next query
+		    	queryId++; //increment the queryId for the next query
 			if (!(node.right.equals("LogicalTableScan"))) {
 			    chain.getQuery().connectTo(query);
 			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,false));
 			} else {
 				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,true));
 			}
-		    queries.add(query);		    		    		   		    
+		    	queries.add(query);		    		    		   		    
 			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
 			
 			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
@@ -151,15 +151,12 @@ public class PhysicalRuleConverter {
 			Pair <Integer, String> rightNode = convert(chainTail);			
 			ChainOfRules rightChain = chains.get(rightNode.left);
 			
-			System.out.println("aaaa1"+leftChain.getOutputSchema().getSchema());
-			System.out.println("aaaa2"+rightChain.getOutputSchema().getSchema());
-
 			String args = logicalPlan.getChildExps().toString();
-		    RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference);
-		    SaberRule rule = operation.construct();		    
-		    Query query = rule.getQuery();
+		    	RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference);
+		    	SaberRule rule = operation.construct();		    
+		    	Query query = rule.getQuery();
 			System.out.println("Current query id : "+ query.getId());
-		    queryId++; //increment the queryId for the next query
+		    	queryId++; //increment the queryId for the next query
 			if ((!(leftNode.right.equals("LogicalTableScan"))) && (!(rightNode.right.equals("LogicalTableScan")))) {
 			    leftChain.getQuery().connectTo(query);
 			    rightChain.getQuery().connectTo(query);
@@ -176,11 +173,9 @@ public class PhysicalRuleConverter {
 				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),leftChain.getData(), rightChain.getData(),true,true,true));
 			}
 			
-		    queries.add(query);
-		    		    
+		    	queries.add(query);		   		
 			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
-								
-			
+											
 			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
 		} else {
 			log.info ("Broken chain");			
