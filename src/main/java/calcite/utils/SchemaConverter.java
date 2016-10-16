@@ -24,7 +24,7 @@ public class SchemaConverter {
 		this.schema = schema;		
 	}
 	
-	/* Create Saber's tables from a given Calcite schema*/
+	/* Create Saber's tables from a given Calcite schema. It cannot convert nested schemas yet.*/
 	public List<Pair<String,ITupleSchema>> convert(){
 		List<Pair<String,ITupleSchema>> tablesList = new ArrayList<Pair<String,ITupleSchema>>();
 		Set<String> tables = schema.getTableNames();
@@ -35,6 +35,7 @@ public class SchemaConverter {
 			ITupleSchema saberSchema = new SaberSchema().createTable(fields);
 			System.out.println("Schema : " + saberSchema.getSchema());
 			
+			table = schema.getName() + "." + table; //add the schema prefix
 			tablesList.add(new Pair <String,ITupleSchema>(table, saberSchema));
 		}				
 		return  tablesList;

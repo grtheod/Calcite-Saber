@@ -42,18 +42,22 @@ import uk.ac.imperial.lsds.saber.cql.operators.gpu.ReductionKernel;
 
 public class SaberAggregateRule implements SaberRule{
 	public static final String usage = "usage: Aggregate";
-	List<String> args = new ArrayList<>();
+	String args;
 	int [] offsets;
 	ITupleSchema schema;
 	ITupleSchema outputSchema;
 	IOperatorCode cpuCode;
 	IOperatorCode gpuCode;
 	Query query;
+	int queryId = 0;
+	long timestampReference = 0;
 	
 	
-	public SaberAggregateRule(ITupleSchema schema,List<String> args){
-		this.args=args;
-		this.schema=schema;
+	public SaberAggregateRule(ITupleSchema schema,String args, int queryId, long timestampReference){
+		this.args = args;
+		this.schema = schema;
+		this.queryId = queryId;
+		this.timestampReference = timestampReference;	
 	}
 	
 	public void prepareRule() {
@@ -62,40 +66,8 @@ public class SaberAggregateRule implements SaberRule{
 		WindowType windowType = WindowType.ROW_BASED;
 		int windowRange = 1024;
 		int windowSlide = 1024;
-		String operands = null;
-		long timestampReference = 0;
-		int queryId = 0;
-		 
-		/* Parse command line arguments */
-		int i, j;
-		for (i = 0; i < args.size(); ) {
-			if ((j = i + 1) == args.size()) {
-				System.err.println(usage);
-				System.exit(1);
-			} else
-			if (args.get(i).equals("--batch-size")) { 
-				batchSize = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--window-type")) { 
-				windowType = WindowType.fromString(args.get(j));
-			} else
-			if (args.get(i).equals("--window-range")) { 
-				windowRange = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--window-slide")) { 
-				windowSlide = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--operands")) {
-				operands = args.get(j);
-			} else
-			if (args.get(i).equals("--queryId")) {
-				queryId = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--timestampReference")) {
-				timestampReference = Long.parseLong(args.get(j));
-			} 
-			i = j + 1;
-		}
+		String operands = args;
+		int i;
 		
 		QueryConf queryConf = new QueryConf (batchSize);
 		
@@ -128,8 +100,7 @@ public class SaberAggregateRule implements SaberRule{
 		Expression [] outputAttributes = new Expression[n]; 		
 		outputAttributes[0] = new LongColumnReference(0);
 
-		if (numberOfKeyAttributes > 0) {
-			
+		if (numberOfKeyAttributes > 0) {			
 			for (i = 1; i <= numberOfKeyAttributes; ++i) {				
 				Expression e = groupByAttributes[i - 1];
 				     if (e instanceof   IntExpression) { outputAttributes[i] = new   IntColumnReference(i);}
@@ -146,19 +117,35 @@ public class SaberAggregateRule implements SaberRule{
 		/* Set count attribute */
 		if (groupByAttributes == null)
 			outputAttributes[n - 1] = new IntColumnReference(n - 1);					
+		
 		//set column names
-		outputSchema = ExpressionsUtil.getTupleSchemaFromExpressions(outputAttributes);		
+		outputSchema = ExpressionsUtil.getTupleSchemaFromExpressions(outputAttributes);
+		String name;
+		if (numberOfKeyAttributes > 0) {			
+			for (i = 1; i <= numberOfKeyAttributes; ++i) {					
+				name = schema.getAttributeName(Integer.parseInt(groupByAttributes[i-1].toString().replace("\"", "")));
+				outputSchema.setAttributeName(i, name);
+			}
+		}
+		for (i = numberOfKeyAttributes + 1; i < n - 1; ++i){
+		 	name = schema.getAttributeName(Integer.parseInt(aggregationAttributes[i - numberOfKeyAttributes - 1].toString().replace("\"", "")));
+			outputSchema.setAttributeName(i, aggregationTypes[i - numberOfKeyAttributes - 1].toString() + "("
+					+ name + ")");
+		}
+		
+		/* Set count attribute */
+		outputSchema.setAttributeName(i,   "CNT(*"+ ")");
 		
 	}
 
 	/* Get the aggregations and their references to columns. Count is  assigned to timestamp column.*/
 	private Pair<AggregationType[], FloatColumnReference[]> getAggregationTypesAndAttributes(String operands) {
-		String aggr [] = operands.substring(operands.indexOf("]")+2).split(",");
+		String aggr [] = operands.substring(operands.indexOf(",")+1).split(",");
 		
 		AggregationType [] aggregationTypes = new AggregationType [aggr.length];
 		String aggregate = null;
 		for (int i = 0; i < aggr.length; ++i) {
-			aggregate = aggr[i].substring(aggr[i].indexOf("[")+1, aggr[i].indexOf("("));
+			aggregate = aggr[i].substring(aggr[i].indexOf("=")+1, aggr[i].indexOf("("));
 			if (aggregate.equals("COUNT")){ aggregate="CNT";}
 			System.out.println("[DBG] aggregation type string is " + aggregate);
 			aggregationTypes[i] = AggregationType.fromString(aggregate);
@@ -169,11 +156,12 @@ public class SaberAggregateRule implements SaberRule{
 		int column;
 		String exp;
 		for (int i = 0; i < aggr.length; ++i){
-			exp = aggr[i].substring(aggr[i].indexOf("(")+2, aggr[i].indexOf("]"));
-		 	if ( exp.equals("")) {
-		 		exp = "-1";
+			if (aggregationTypes[i] == AggregationType.CNT) {
+				column = 0;
+			} else {
+				exp = aggr[i].substring(aggr[i].indexOf("(")+2, aggr[i].indexOf(")"));
+				column = Integer.parseInt(exp.replace(")","")) + 1;
 			}
-			column = Integer.parseInt(exp.replace(")","")) + 1;
 			aggregationAttributes[i] = new FloatColumnReference(column);
 			System.out.println("[DBG] aggregation Attribute string is " + aggregationAttributes[i]);
 		}

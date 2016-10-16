@@ -6,6 +6,7 @@ import org.apache.calcite.util.Pair;
 
 import calcite.planner.physical.rules.SaberAggregateRule;
 import calcite.planner.physical.rules.SaberFilterRule;
+import calcite.planner.physical.rules.SaberJoinRule;
 import calcite.planner.physical.rules.SaberProjectRule;
 import calcite.planner.physical.rules.SaberScanRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
@@ -20,13 +21,26 @@ public class RuleAssembler {
 	protected static final String AGGREGATE = "LogicalAggregate";
 	protected static final String SCAN = "LogicalTableScan";
 	String operator;
-	List <String> args;
-	ITupleSchema schema;
+	String args;
+	ITupleSchema schema1, schema2;
+	int queryId;
+	long timestampReference;
 	
-	public RuleAssembler(String operator,List <String> args, ITupleSchema schema){
-		this.operator=operator;
-		this.args=args;
-		this.schema=schema;
+	public RuleAssembler(String operator, String args, ITupleSchema schema, int queryId, long timestampReference){
+		this.operator = operator;
+		this.args = args;
+		this.schema1 = schema;
+		this.queryId = queryId;
+		this.timestampReference = timestampReference;
+	}
+	
+	public RuleAssembler(String operator, String args, ITupleSchema schema1, ITupleSchema schema2, int queryId, long timestampReference){
+		this.operator = operator;
+		this.args = args;
+		this.schema1 = schema1;
+		this.schema2 = schema2;
+		this.queryId = queryId;
+		this.timestampReference = timestampReference;
 	}
 	
 	public SaberRule construct(){
@@ -36,27 +50,27 @@ public class RuleAssembler {
 		switch (operator){			
 			case PROJECT :
 				System.out.println("==> Assembling Projection");
-				SaberProjectRule project = new SaberProjectRule(schema,args);
+				SaberProjectRule project = new SaberProjectRule(schema1, args, queryId, timestampReference);
 				project.prepareRule();				
 				return project;
 			case FILTER :
 				System.out.println("==> Assembling Filter");
-				SaberFilterRule filter = new SaberFilterRule(schema,args);
+				SaberFilterRule filter = new SaberFilterRule(schema1, args, queryId, timestampReference);
 				filter.prepareRule();				
 				return filter;
 			case JOIN :
 				System.out.println("==> Assembling Join");
-				System.err.println("Not implemented yet.");
-				System.exit(1);
-				break;				
+				SaberJoinRule join = new SaberJoinRule(schema1, schema2, args, queryId, timestampReference);
+				join.prepareRule();				
+				return join;				
 			case AGGREGATE :
 				System.out.println("==> Assembling Aggregate");
-				SaberAggregateRule aggregate = new SaberAggregateRule(schema,args);
+				SaberAggregateRule aggregate = new SaberAggregateRule(schema1, args, queryId, timestampReference);
 				aggregate.prepareRule();				
 				return aggregate;	
 			case SCAN :
 				System.out.println("==> Assembling Scan");
-				SaberScanRule scan = new SaberScanRule(schema,args);
+				SaberScanRule scan = new SaberScanRule(schema1);
 				scan.prepareRule();				
 				return scan;
 			default :

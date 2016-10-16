@@ -31,17 +31,25 @@ public class PhysicalRuleConverter {
 	private RelNode logicalPlan;
 	private Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap;
 	private SystemConf systemConf;
+	private Map<Integer,ChainOfRules> chains;
+	private Set<Query> queries = new HashSet<Query>();
+	List <SaberRule> aggregates = new ArrayList <SaberRule>();
+	long timestampReference;
+	int queryId;
 	
-	public PhysicalRuleConverter (RelNode logicalPlan, Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap , SystemConf systemConf) {
+	public PhysicalRuleConverter (RelNode logicalPlan, Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap , SystemConf systemConf, long timestampReference) {
 		
 		this.logicalPlan = logicalPlan;
 		this.tablesMap = tablesMap;
 		this.systemConf = systemConf;
+		this.chains = new HashMap<Integer,ChainOfRules>();
+		this.timestampReference = timestampReference;
+		this.queryId = 0;
 	}
 	
-	public void convert () {
+	public Pair<Integer, String> convert (RelNode logicalPlan) {
 		
-		log.info("Convert logical plan");
+		//log.info("Convert logical plan");
 		log.info(String.format("Root is %s", logicalPlan.toString()));
 		
 		List<RelNode> inputs = logicalPlan.getInputs();
@@ -52,151 +60,139 @@ public class PhysicalRuleConverter {
 		 * 
 		 * If children.size() == 2 (and no greater), then when the chain
 		 * is broken `chainTail` node should be a join operator. 
+		 * 
+		 * The physical operators are constructed recursively. 
+		 * 1)If children.size() == 0, we have a leaf node that is a simple LogicalTableScan.
+		 * 2)If children.size() == 1, we have one or more (nested) children. In order to
+		 * 	construct this operator, we have to construct its children first.
+		 * 3)If children.size() == 2, we have a join. In order to built a join, we create
+		 * 	recursively its left and right side children.
 		 */
 		
 		RelNode chainTail = logicalPlan;
-		while (true) {
 			
-			log.info(String.format("Node %2d is %s", chainTail.getId(), chainTail.toString()));
+		log.info(String.format("Node %2d is %s", chainTail.getId(), chainTail.toString()));
+		
+		List<RelNode> children = chainTail.getInputs();
+		if (children.size() == 0){	
 			
-			List<RelNode> children = chainTail.getInputs();
-			if (children.size() > 0 && children.size() < 2)
-				chainTail = children.get(0);
-			else {
-				log.info ("Broken chain");
-				break;
+			System.out.println();
+			System.out.println(chainTail.getRelTypeName());
+			System.out.println(chainTail.getTable().getQualifiedName());
+			String tableKey = chainTail.getTable().getQualifiedName().toString().replace("[", "").replace("]", "").replace(", ", ".");
+			Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
+			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), null, pair.left, chainTail.getId(), timestampReference);	    
+		    SaberRule rule = operation.construct();
+		    Query query = rule.getQuery();
+		    ITupleSchema outputSchema = rule.getOutputSchema();
+			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,pair.right.left,false,false));
+			System.out.println("OutputSchema : " + outputSchema.getSchema());
+			
+			return new Pair<Integer, String>(chainTail.getId(),chainTail.getRelTypeName());			
+		} else
+		if (children.size() == 1) {
+			chainTail = children.get(0);
+			Pair <Integer, String> node = convert(chainTail);
+			
+			System.out.println("-------------------------------------------");
+			//System.out.println(logicalPlan.getRelTypeName());
+			String args = "";
+			/* Take advantage of getChildExps() RexNodes and not use simple Strings.*/
+			if (logicalPlan.getRelTypeName().equals("LogicalProject")) {
+				args = logicalPlan.getChildExps().toString();
+				//System.out.println(args);
+			} else 
+			if (logicalPlan.getRelTypeName().equals("LogicalFilter")) {
+				args = logicalPlan.getChildExps().toString();
+				//System.out.println(args);
+			} else
+			if (logicalPlan.getRelTypeName().equals("LogicalAggregate")) {
+				args = logicalPlan.getDescription().replace("input="+logicalPlan.getInput(0).toString()+",", "");
+				args = args.substring(args.indexOf("("));
+				//System.out.println(args);				
+			} else {
+				System.err.println("Not supported operator.");
 			}
+			
+			ChainOfRules chain = chains.get(node.left);
+		    RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, chain.getOutputSchema(), queryId, timestampReference);
+		    SaberRule rule = operation.construct();
+		    
+			if (logicalPlan.getRelTypeName().equals("LogicalAggregate")) {
+				aggregates.add(rule);
+			}
+		    
+		    Query query = rule.getQuery();
+			System.out.println("Current query id : "+ query.getId());
+		    queryId++; //increment the queryId for the next query
+			if (!(node.right.equals("LogicalTableScan"))) {
+			    chain.getQuery().connectTo(query);
+			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,false));
+			} else {
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,true));
+			}
+		    queries.add(query);		    		    		   		    
+			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
+			
+			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
+		} else
+		if (children.size() == 2) {
+			
+			System.out.println("-------------------------------------------");
+			/*Build left side of join*/
+			chainTail = children.get(0);
+			System.out.println(chainTail);
+			Pair <Integer, String> leftNode = convert(chainTail);			
+			ChainOfRules leftChain = chains.get(leftNode.left);
+			
+			/*Build right side of join*/
+			chainTail = children.get(1);
+			System.out.println(chainTail);
+			Pair <Integer, String> rightNode = convert(chainTail);			
+			ChainOfRules rightChain = chains.get(rightNode.left);
+			
+			System.out.println("aaaa1"+leftChain.getOutputSchema().getSchema());
+			System.out.println("aaaa2"+rightChain.getOutputSchema().getSchema());
+
+			String args = logicalPlan.getChildExps().toString();
+		    RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference);
+		    SaberRule rule = operation.construct();		    
+		    Query query = rule.getQuery();
+			System.out.println("Current query id : "+ query.getId());
+		    queryId++; //increment the queryId for the next query
+			if ((!(leftNode.right.equals("LogicalTableScan"))) && (!(rightNode.right.equals("LogicalTableScan")))) {
+			    leftChain.getQuery().connectTo(query);
+			    rightChain.getQuery().connectTo(query);
+			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),leftChain.getData(),rightChain.getData(),true,false,false));
+			} else
+			if	((!(leftNode.right.equals("LogicalTableScan"))) && ((rightNode.right.equals("LogicalTableScan")))) {
+				leftChain.getQuery().connectTo(query);
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(), rightChain.getData() , leftChain.getData(),true,true,false));
+			} else
+			if	(((leftNode.right.equals("LogicalTableScan"))) && (!(rightNode.right.equals("LogicalTableScan")))) {
+				rightChain.getQuery().connectTo(query);
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),leftChain.getData(), rightChain.getData(),true,true,false));
+			} else {
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),leftChain.getData(), rightChain.getData(),true,true,true));
+			}
+			
+		    queries.add(query);
+		    		    
+			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
+								
+			
+			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
+		} else {
+			log.info ("Broken chain");			
 		}
+		return null;
 	}
 	
+	
 	public void execute () {
+				
+		System.out.println("-------------------------------------------");
 		
-		/* Create a list of logical operators for a given plan*/
-		String operators[] = RelOptUtil.toString(logicalPlan).split("\\r?\\n");
-						
-		List<Pair<String,List<String>>> physicalOperators = new ArrayList<Pair<String,List<String>>>();
-		String schema = "",table = "",temp,operator,logicalOperator,operands;
-		int whiteSpaces; /* whitespaces from the begging of the logical rule will be used for nested joins*/
-		for (int counter=operators.length - 1; counter >= 0;counter--){
-			
-			operator = operators[counter];
-			List <String> args = new ArrayList<String>(); 
-			//System.out.println("Converting operator : "+ operator);
-			whiteSpaces = 0;
-			
-			if ((operator).contains("LogicalTableScan")){
-				temp = operator.substring(0,operator.indexOf("L"));
-				whiteSpaces = temp.length();
-				
-				logicalOperator = (operator.substring(0,operator.indexOf("("))).trim();
-				temp = operator.substring(operator.indexOf('[')+2,operator.indexOf(']'));
-				String temps[] = temp.split(", ");
-				schema = temps[0];
-				table = temps[1];
-            			args.add("--schema");
-            			args.add(schema);
-            			args.add("--table");
-            			args.add(table);
-			} else{
-				temp = operator.substring(0,operator.indexOf("L"));
-				whiteSpaces = temp.length();
-				
-				logicalOperator = (operator.substring(0,operator.indexOf("("))).trim();
-				operands = operator.substring(operator.indexOf('('));
-				args.add("--operands");
-				args.add(operands);
-			}
-			args.add("--whitespaces");
-			args.add(Integer.toString(whiteSpaces));
-			physicalOperators.add(new Pair<String, List<String>>(logicalOperator,args));
-			//System.out.println("WhiteSpaces = "+ whiteSpaces);
-		}
-		
-		System.out.println("---------------------------------------------");
-	    	/* Transformation from relational operators to physical => */ 
-				
-		/*  Creating a single chain of queries. For complex queries that use JOIN
-		 *  we have to create multiple chains and join them. */	    
-		RuleAssembler operation;
-		SaberRule rule;
-		Query query = null;
-		ITupleSchema outputSchema = null;
-		Set<Query> queries = new HashSet<Query>();
-		int queryId = 0;
-		long timestampReference = System.nanoTime();
-		List <SaberRule> aggregates = new ArrayList <SaberRule>();
-		
-		
-		Map<Integer, List <ChainOfRules>> chainMap = new HashMap<Integer, List <ChainOfRules>>();
-		List <ChainOfRules> chains = new ArrayList <ChainOfRules>();
-		ChainOfRules chain = null;
-		for(Pair<String,List<String>> po : physicalOperators){
-			po.right.add("--queryId");
-			po.right.add(Integer.toString(queryId));
-			po.right.add("--timestampReference");
-			po.right.add(Long.toString(timestampReference));
-
-			if (po.left.equals("LogicalTableScan")){
-				String tableKey = po.right.get(po.right.indexOf("--schema") +1) + 
-						"." + po.right.get(po.right.indexOf("--table") +1);
-				Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
-				operation = new RuleAssembler(po.left, po.right, pair.left);	    
-			    rule = operation.construct();
-			    query = rule.getQuery();
-			    outputSchema = rule.getOutputSchema();			    
-				queryId--;
-
-				if (!(chain == null)){
-					chains.add(chain);
-				}
-				int wS = Integer.parseInt(po.right.get( po.right.indexOf("--whitespaces") +1));
-				chain = new ChainOfRules(wS,query,outputSchema,pair.right.left,false);
-			} else
-			if (po.left.equals("LogicalJoin")) {
-				
-				/*
-				 * Not implemented yet;
-				 * */
-			    operation = new RuleAssembler(po.left, po.right, null);
-			    rule = operation.construct();
-			    
-			    
-			} else					
-			if (query==null) {
-			    ITupleSchema inputSchema = outputSchema;
-			    operation = new RuleAssembler(po.left, po.right, inputSchema);
-			    rule = operation.construct();
-			    query = rule.getQuery();
-			    outputSchema = rule.getOutputSchema();
-			    queries.add(query);
-			    
-			    int wS = Integer.parseInt(po.right.get( po.right.indexOf("--whitespaces") +1));
-			    chain.addRule(wS, query, outputSchema);
-			} else {
-			    operation = new RuleAssembler(po.left, po.right, outputSchema);	    
-			    rule = operation.construct();
-			    Query query1 = rule.getQuery();
-			    outputSchema = rule.getOutputSchema();
-			    query.connectTo(query1);
-			    queries.add(query1);
-			    query = query1; //keep the last query to build the chain
-			    
-			    int wS = Integer.parseInt(po.right.get( po.right.indexOf("--whitespaces") +1));
-			    chain.addRule(wS, query, outputSchema);
-			}
-			
-			if (po.left.equals("LogicalAggregate")){
-			    //aggregates.add(rule);
-			}
-			queryId++;
-		    	System.out.println("OutputSchema : " + outputSchema.getSchema());
-		    if (!(po.left.equals("LogicalTableScan"))){
-		    	System.out.println("Query id : "+ query.getName());
-		    }
-		    System.out.println();
-		}
-		chains.add(chain);
-				
 		QueryApplication application = new QueryApplication(queries);		
 		application.setup();
 		
@@ -218,15 +214,19 @@ public class PhysicalRuleConverter {
 		
 		try {
 			while (true) {
-				for (ChainOfRules c : chains){
-					if(c.getFlag() == false) {
-						application.processData (c.getData());
-					} else {
-						//execute join =>
-						//application.processFirstStream  (data1);
-						//application.processSecondStream (data2);
-					}
-					
+				for (Map.Entry<Integer,ChainOfRules> c : chains.entrySet()){	
+					if(c.getValue().getIsFirst()) {
+						if(c.getValue().getFlag() == false) {
+							application.processData (c.getValue().getData());
+						} else {
+							if(c.getValue().getHasMore() == true) {
+								application.processSecondStream (c.getValue().getData());
+							} else {
+								application.processFirstStream  (c.getValue().getData());
+								application.processSecondStream (c.getValue().getData2());
+							}
+						}
+					}					
 				}
 				if (systemConf.LATENCY_ON){
 					//b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1L));

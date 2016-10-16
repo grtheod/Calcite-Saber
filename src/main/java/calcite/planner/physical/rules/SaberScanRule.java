@@ -10,15 +10,12 @@ import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
 
 public class SaberScanRule implements SaberRule{
 	public static final String usage = "usage: Dummy Scan";
-	List<String> args = new ArrayList<>();
 	int [] offsets;
 	ITupleSchema schema;
-	ITupleSchema outputSchema;
+	ITupleSchema outputSchema;	
 	
-	
-	public SaberScanRule(ITupleSchema schema, List<String> args) {
-		this.schema = schema;
-		this.args = args;
+	public SaberScanRule(ITupleSchema schema) {
+		this.schema = schema;		
 	}
 
 	public void prepareRule() {

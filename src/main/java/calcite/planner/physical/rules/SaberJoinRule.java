@@ -12,6 +12,7 @@ import uk.ac.imperial.lsds.saber.QueryConf;
 import uk.ac.imperial.lsds.saber.QueryOperator;
 import uk.ac.imperial.lsds.saber.WindowDefinition;
 import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
+import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntConstant;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntExpression;
@@ -33,85 +34,34 @@ public class SaberJoinRule implements SaberRule{
 	public static final int    GREATER_OP = 4;
 	public static final int NONGREATER_OP = 5;
 	
-	List<String> args = new ArrayList<>();
+	String args;
 	int [] offsets;
 	ITupleSchema schema1,schema2;
 	ITupleSchema outputSchema;
 	IOperatorCode cpuCode;
 	IOperatorCode gpuCode;
 	Query query;
+	int queryId = 0;
+	long timestampReference = 0;
 	
-	
-	public SaberJoinRule(ITupleSchema schema1, ITupleSchema schema2, List<String> args){
+	public SaberJoinRule(ITupleSchema schema1, ITupleSchema schema2, String args, int queryId, long timestampReference){
 		this.args=args;
 		this.schema1=schema1;
 		this.schema2=schema2;
+		this.queryId = queryId;
+		this.timestampReference = timestampReference;
 	}
 	
-	public Query ThetaJoinWithoutPredicated (){
+	public void prepareRule() {
 
 		int batchSize = 1048576;
 		WindowType windowType1 = WindowType.ROW_BASED;
-		int windowRange1 = 1;
-		int windowSlide1 = 1;
-		int numberOfAttributes1 = 6;
+		int windowRange1 = 1024;
+		int windowSlide1 = 1024;
 		WindowType windowType2 = WindowType.ROW_BASED;
-		int windowRange2 = 1;
-		int windowSlide2 = 1;
-		int numberOfAttributes2 = 6;
-		int comparisons = 1;
-		int queryId = 0;
-		String operands = null;
-		long timestampReference = 0;
-		
-		/* Parse command line arguments */
-		int i, j;
-		for (i = 0; i < args.size(); ) {
-			if ((j = i + 1) == args.size()) {
-				System.err.println(usage);
-				System.exit(1);
-			}
-			if (args.get(i).equals("--batch-size")) { 
-				batchSize = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--window-type-of-first-stream")) { 
-				windowType1 = WindowType.fromString(args.get(j));
-			} else
-			if (args.get(i).equals("--window-range-of-first-stream")) { 
-				windowRange1 = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--window-slide-of-first-stream")) { 
-				windowSlide1 = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--input-attributes-of-first-stream")) { 
-				numberOfAttributes1 = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--window-type-of-second-stream")) { 
-				windowType2 = WindowType.fromString(args.get(j));
-			} else
-			if (args.get(i).equals("--window-range-of-second-stream")) { 
-				windowRange2 = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--window-slide-of-second-stream")) { 
-				windowSlide2 = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--input-attributes-of-second-stream")) { 
-				numberOfAttributes2 = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--comparisons")) { 
-				comparisons = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--operands")) {
-				operands = args.get(j);
-			} else
-			if (args.get(i).equals("--queryId")) {
-				queryId = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--timestampReference")) {
-				timestampReference = Long.parseLong(args.get(j));
-			} 
-			i = j + 1;
-		}
+		int windowRange2 = 1024;
+		int windowSlide2 = 1024;
+		String operands = args;		
 		
 		QueryConf queryConf = new QueryConf (batchSize);
 		
@@ -130,19 +80,26 @@ public class SaberJoinRule implements SaberRule{
 		Set<QueryOperator> operators = new HashSet<QueryOperator>();
 		operators.add(operator);		
 		
-		Query query = new Query (queryId, operators, schema1, window1, schema2, window2, queryConf, timestampReference);
-		
-		return query;
+		query = new Query (queryId, operators, schema1, window1, schema2, window2, queryConf, timestampReference);
+		outputSchema = ExpressionsUtil.mergeTupleSchemas(schema1, schema2);
+		int attributesOfSchema1 = schema1.numberOfAttributes();
+		int attributesOfOutputSchema = outputSchema.numberOfAttributes();
+		for (int i = 0; i < attributesOfSchema1; i++){
+			outputSchema.setAttributeName(i, schema1.getAttributeName(i));
+		}
+		for (int i = attributesOfSchema1; i < attributesOfOutputSchema; i++){
+			outputSchema.setAttributeName(i, schema2.getAttributeName(i - attributesOfSchema1));
+		}
 	}
 
 	private IPredicate getJoinCondition(String operands) {
 		IPredicate predicate = null;
 		String condition = operands.substring(operands.indexOf("[")+1,operands.indexOf("]"));
 		if ( !( (condition.contains("OR")) || (condition.contains("AND")))) {
-			predicate = createSimpleJoinCondition(operands);
+			predicate = createSimpleJoinCondition(condition);
 			System.out.println("Simple Join Expr : "+ predicate.toString());
 		} else {
-			predicate = createComplexJoinCondition(operands);
+			predicate = createComplexJoinCondition(condition);
 			System.out.println("Complex Join Expr : "+ predicate.toString());
 		}
 
@@ -156,13 +113,15 @@ public class SaberJoinRule implements SaberRule{
 		String [] ops = operands.substring(operands.indexOf("(")+1).replace(")", "").split(",");
 		IntExpression firstOp,secondOp;
 		
-		if(ops[0].contains("$")){
+		int tempNum; /*Fix the columnReferences!!!*/
+		if(ops[0].contains("$")){			
 			firstOp = new IntColumnReference(Integer.parseInt(ops[0].replace("$", "").trim()) + 1);
 		}else {
 			firstOp = new IntConstant(Integer.parseInt(ops[0].trim()));
 		}
 		if(ops[1].contains("$")){
-			secondOp = new IntColumnReference(Integer.parseInt(ops[1].replace("$", "").trim()) + 1);
+			
+			secondOp = new IntColumnReference(Integer.parseInt(ops[1].replace("$", "").trim()) + 2 - schema1.numberOfAttributes());
 		}else {
 			secondOp = new IntConstant(Integer.parseInt(ops[1].trim()));
 		}

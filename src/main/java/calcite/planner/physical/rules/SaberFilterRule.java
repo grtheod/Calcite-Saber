@@ -44,17 +44,21 @@ public class SaberFilterRule implements SaberRule {
 	public static final int    GREATER_OP = 4;
 	public static final int NONGREATER_OP = 5;
 	
-	List<String> args = new ArrayList<>();
+	String args;
 	int [] offsets;
 	ITupleSchema schema;
 	ITupleSchema outputSchema;
 	IOperatorCode cpuCode;
 	IOperatorCode gpuCode;
 	Query query;
+	int queryId = 0;
+	long timestampReference = 0;
 	
-	public SaberFilterRule(ITupleSchema schema,List<String> args){
-		this.args=args;
-		this.schema=schema;
+	public SaberFilterRule(ITupleSchema schema, String args, int queryId , long timestampReference){
+		this.args = args;
+		this.schema = schema;
+		this.queryId = queryId;
+		this.timestampReference = timestampReference;
 	}
 	
 	public void prepareRule() {
@@ -63,41 +67,8 @@ public class SaberFilterRule implements SaberRule {
 		WindowType windowType = WindowType.ROW_BASED;
 		int windowRange = 1;
 		int windowSlide = 1;
-		String operands = null;
-		int queryId = 0;
-		long timestampReference = 0;
-		
-		/* Parse command line arguments */
-		int i, j;
-		for (i = 0; i < args.size(); ) {
-			if ((j = i + 1) == args.size()) {
-				System.err.println(usage);
-				System.exit(1);
-			} else
-			if (args.get(i).equals("--batch-size")) { 
-				batchSize = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--window-type")) { 
-				windowType = WindowType.fromString(args.get(j));
-			} else
-			if (args.get(i).equals("--window-range")) { 
-				windowRange = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--window-slide")) { 
-				windowSlide = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--operands")) {
-				operands = args.get(j);
-			} else
-			if (args.get(i).equals("--queryId")) {
-				queryId = Integer.parseInt(args.get(j));
-			} else
-			if (args.get(i).equals("--timestampReference")) {
-				timestampReference = Long.parseLong(args.get(j));
-			} 			
-			i = j + 1;
-		}
-				
+		String operands = args;
+						
 		QueryConf queryConf = new QueryConf (batchSize);
 		
 		WindowDefinition window = new WindowDefinition (windowType, windowRange, windowSlide);
@@ -114,8 +85,7 @@ public class SaberFilterRule implements SaberRule {
 		operators.add(operator);
 		
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);		
-		outputSchema = schema;		
-		
+		outputSchema = schema;			
 	}
 
 	/*

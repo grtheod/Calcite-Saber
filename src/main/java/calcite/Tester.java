@@ -52,18 +52,20 @@ public class Tester {
 		
 		QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
 		
-		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-				
-				  "select productid, sum(units) "
-				+ "from s.orders "
-				+ "where units > 5 "
-				+ "group by productid"
+		/* Until it is fixed, when joining two tables, the attributes of join predicate should have 
+		 * the same order as the tables are defined after FROM. For example:
+		 * ...
+		 * FROM table1,table2,...
+		 * WHERE table1.attrx = table2.attry AND ...
+		 * ... 
+		 * */
+		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
+				  "select s.products.productid , sum(units) "
+				+ "from s.orders, s.products "
+				+ "where s.orders.productid =s.products.productid "
+				+ "group by  s.products.productid"
 				);
-		
-		// + "select productid,count(*),sum(units) from s.orders"
-		// + " where units > 5 group by productid  "); //and s.orders.units = 5
-		// (18 > 5) and((s.orders.units > 5 and (1 > 4) and (3 = 4)) or (1>0))
-		
+				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
 		
 		/*Set System Configuration.*/
@@ -78,13 +80,14 @@ public class Tester {
 				.setUnboundedBufferSize(2 * 1048576)
 				.setThreads(1)
 				.build();			
+	
+		long timestampReference = System.nanoTime();
+		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, tablesMap, sconf,timestampReference);
 		
-		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, tablesMap, sconf);
+		physicalPlan.convert (logicalPlan);
 		
 		// Commented out for now
-		// physicalPlan.execute();
-		
-		physicalPlan.convert ();
+		physicalPlan.execute();
 		
 		/*
 		 * Notes:
