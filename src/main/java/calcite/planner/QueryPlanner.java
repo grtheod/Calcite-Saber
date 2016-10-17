@@ -27,16 +27,24 @@ import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMdRowCount;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
+import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
+import org.apache.calcite.rel.rules.AggregateProjectPullUpConstantsRule;
+import org.apache.calcite.rel.rules.AggregateRemoveRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
 import org.apache.calcite.rel.rules.FilterJoinRule;
+import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
+import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
+import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
+import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -88,7 +96,9 @@ public class QueryPlanner {
     // Create hep planner for optimizations.
     HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
     hepProgramBuilder.addRuleClass(ReduceExpressionsRule.class);
+    //hepProgramBuilder.addRuleClass(PruneEmptyRules.class);
     hepProgramBuilder.addRuleClass(FilterTableScanRule.class);
+    hepProgramBuilder.addRuleClass(FilterMergeRule.class);
     hepProgramBuilder.addRuleClass(FilterProjectTransposeRule.class);
     hepProgramBuilder.addRuleClass(FilterAggregateTransposeRule.class);
     hepProgramBuilder.addRuleClass(FilterJoinRule.class);
@@ -97,6 +107,12 @@ public class QueryPlanner {
     hepProgramBuilder.addRuleClass(ProjectJoinTransposeRule.class);
     hepProgramBuilder.addRuleClass(ProjectTableScanRule.class);
     hepProgramBuilder.addRuleClass(ProjectFilterTransposeRule.class);
+    hepProgramBuilder.addRuleClass(ProjectRemoveRule.class);
+    hepProgramBuilder.addRuleClass(AggregateRemoveRule.class);
+    hepProgramBuilder.addRuleClass(AggregateJoinTransposeRule.class);
+    hepProgramBuilder.addRuleClass(AggregateProjectMergeRule.class);
+    hepProgramBuilder.addRuleClass(AggregateProjectPullUpConstantsRule.class);
+    hepProgramBuilder.addRuleClass(TableScanRule.class);
     
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
      final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
@@ -107,33 +123,41 @@ public class QueryPlanner {
     
     /*The order in which the rules within a collection will be attempted is
      arbitrary, so if more control is needed, use addRuleInstance instead.*/
-    
-    this.hepPlanner.addRule(ReduceExpressionsRule.CALC_INSTANCE);
-    this.hepPlanner.addRule(FilterJoinRule.FILTER_ON_JOIN);
-    this.hepPlanner.addRule(FilterProjectTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(FilterAggregateTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(FilterTableScanRule.INSTANCE);
+
+    //starting rules      
     this.hepPlanner.addRule(ProjectToWindowRule.PROJECT);
+    //this.hepPlanner.addRule(TableScanRule.INSTANCE);
+    
+    // push and merge filter rules
+    this.hepPlanner.addRule(FilterAggregateTransposeRule.INSTANCE);
+    this.hepPlanner.addRule(FilterProjectTransposeRule.INSTANCE);
+    this.hepPlanner.addRule(FilterMergeRule.INSTANCE);
+    this.hepPlanner.addRule(FilterJoinRule.FILTER_ON_JOIN);
+    this.hepPlanner.addRule(FilterTableScanRule.INSTANCE);
+    // push and merge projection rules
+    this.hepPlanner.addRule(ProjectRemoveRule.INSTANCE);
     this.hepPlanner.addRule(ProjectJoinTransposeRule.INSTANCE);
     this.hepPlanner.addRule(JoinProjectTransposeRule.BOTH_PROJECT);
-    this.hepPlanner.addRule(ProjectTableScanRule.INSTANCE);
     this.hepPlanner.addRule(ProjectFilterTransposeRule.INSTANCE);
-	
+    this.hepPlanner.addRule(ProjectTableScanRule.INSTANCE);
+    //aggregate rules
+    this.hepPlanner.addRule(AggregateRemoveRule.INSTANCE);
+    this.hepPlanner.addRule(AggregateJoinTransposeRule.EXTENDED);
+    this.hepPlanner.addRule(AggregateProjectMergeRule.INSTANCE);
+    this.hepPlanner.addRule(AggregateProjectPullUpConstantsRule.INSTANCE);
+    // simplify expressions rules
+    //this.hepPlanner.addRule(ReduceExpressionsRule.CALC_INSTANCE);
+    this.hepPlanner.addRule(ReduceExpressionsRule.FILTER_INSTANCE);
+    this.hepPlanner.addRule(ReduceExpressionsRule.PROJECT_INSTANCE);
+    // prune empty results rules   
+    this.hepPlanner.addRule(PruneEmptyRules.FILTER_INSTANCE);
+    this.hepPlanner.addRule(PruneEmptyRules.PROJECT_INSTANCE);
+    this.hepPlanner.addRule(PruneEmptyRules.AGGREGATE_INSTANCE);
+    this.hepPlanner.addRule(PruneEmptyRules.JOIN_LEFT_INSTANCE);    
+    this.hepPlanner.addRule(PruneEmptyRules.JOIN_RIGHT_INSTANCE);
+    
+    
   }
-
-  /*public OperatorRouter getOperatorRouter(String query) throws Exception {
-    SaberRel relNode = getPlan(query);
-    PhysicalPlanCreator physicalPlanCreator =
-        PhysicalPlanCreator.create(relNode.getCluster().getTypeFactory());
-
-    relNode.physicalPlan(physicalPlanCreator);
-
-    return physicalPlanCreator.getRouter();
-  }
-
-  public SamzaRel getPlan(String query) throws ValidationException, RelConversionException, SqlParseException {
-    return (SamzaRel) validateAndConvert(planner.parse(query));
-  }*/
 
   private RelNode validateAndConvert(SqlNode sqlNode) throws ValidationException, RelConversionException {
     SqlNode validated = validateNode(sqlNode);

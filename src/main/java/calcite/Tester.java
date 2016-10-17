@@ -62,7 +62,7 @@ public class Tester {
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
 				  "select s.products.productid , sum(units) "
 				+ "from s.orders, s.products "
-				+ "where s.orders.productid =s.products.productid "
+				+ "where s.orders.productid = s.products.productid "
 				+ "group by  s.products.productid"
 				);
 				

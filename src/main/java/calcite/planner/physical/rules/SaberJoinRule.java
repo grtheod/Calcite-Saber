@@ -113,14 +113,21 @@ public class SaberJoinRule implements SaberRule{
 		String [] ops = operands.substring(operands.indexOf("(")+1).replace(")", "").split(",");
 		IntExpression firstOp,secondOp;
 		
-		int tempNum; /*Fix the columnReferences!!!*/
+		String tempNum; /*Fix the columnReferences!!!*/
+		
+		if (Integer.parseInt(ops[0].replace("$", "").trim()) > Integer.parseInt(ops[1].replace("$", "").trim())) {
+			tempNum = ops[0];
+			ops[0] = ops[1];
+			ops[1] = tempNum;
+		}
+			
+		
 		if(ops[0].contains("$")){			
 			firstOp = new IntColumnReference(Integer.parseInt(ops[0].replace("$", "").trim()) + 1);
 		}else {
 			firstOp = new IntConstant(Integer.parseInt(ops[0].trim()));
 		}
-		if(ops[1].contains("$")){
-			
+		if(ops[1].contains("$")){			
 			secondOp = new IntColumnReference(Integer.parseInt(ops[1].replace("$", "").trim()) + 2 - schema1.numberOfAttributes());
 		}else {
 			secondOp = new IntConstant(Integer.parseInt(ops[1].trim()));
