@@ -1,12 +1,8 @@
 package calcite;
 
-import java.nio.ByteBuffer;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;
@@ -14,16 +10,14 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlExplainLevel;
-import org.apache.calcite.util.Pair;
 
 import calcite.planner.QueryPlanner;
 import calcite.planner.physical.PhysicalRuleConverter;
 import calcite.planner.physical.SystemConfig;
 import calcite.utils.CustomersTableFactory;
+import calcite.utils.DataGenerator;
 import calcite.utils.OrdersTableFactory;
 import calcite.utils.ProductsTableFactory;
-import calcite.utils.SchemaConverter;
-import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.SystemConf;
 
 public class Tester {
@@ -44,9 +38,9 @@ public class Tester {
 		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));
 		
 		/* Create a schema in Saber from a given SchemaPlus and add some mock data for testing.*/
-		SchemaConverter schemaConverter = new SchemaConverter(schema);
-		List<Pair<String,ITupleSchema>> tablesList = schemaConverter.convert();
-		Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap = schemaConverter.setMockInput(tablesList);
+		DataGenerator dataGenerator = new DataGenerator().
+										setSchema(schema, true).
+										build();
 		
 		Statement statement = connection.createStatement();
 		
@@ -84,7 +78,7 @@ public class Tester {
 				.build();			
 	
 		long timestampReference = System.nanoTime();
-		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, tablesMap, sconf,timestampReference);
+		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
 		physicalPlan.convert (logicalPlan);
 		
