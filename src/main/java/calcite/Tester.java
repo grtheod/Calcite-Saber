@@ -52,18 +52,20 @@ public class Tester {
 		
 		QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
 		
-		/* Until it is fixed, when joining two tables, the attributes of join predicate should have 
-		 * the same order as the tables are defined after FROM. For example:
+		/* Until it is fixed, when joining two tables and then using group by, the attributes of group by predicate should be 
+		 * from the first table. For example:
 		 * ...
 		 * FROM table1,table2,...
 		 * WHERE table1.attrx = table2.attry AND ...
+		 * ...
+		 * GROUP BY table1.attrx, ... 
 		 * ... 
 		 * */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
-				  "select s.products.productid , sum(units) "
+				"select s.orders.productid , sum(units) "
 				+ "from s.orders, s.products "
 				+ "where s.orders.productid = s.products.productid "
-				+ "group by  s.products.productid"
+				+ "group by s.orders.productid"
 				);
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
@@ -86,7 +88,6 @@ public class Tester {
 		
 		physicalPlan.convert (logicalPlan);
 		
-		// Commented out for now
 		physicalPlan.execute();
 		
 		/*

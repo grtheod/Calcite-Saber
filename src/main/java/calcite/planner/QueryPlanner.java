@@ -6,10 +6,6 @@ import java.util.List;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
-import org.apache.calcite.plan.RelOptCost;
-import org.apache.calcite.plan.RelOptCostImpl;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepPlanner;
@@ -22,9 +18,6 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
-import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
-import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
-import org.apache.calcite.rel.metadata.RelMdRowCount;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
@@ -42,6 +35,7 @@ import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
+import org.apache.calcite.rel.rules.ProjectWindowTransposeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.rel.rules.TableScanRule;
@@ -113,6 +107,7 @@ public class QueryPlanner {
     hepProgramBuilder.addRuleClass(AggregateProjectMergeRule.class);
     hepProgramBuilder.addRuleClass(AggregateProjectPullUpConstantsRule.class);
     hepProgramBuilder.addRuleClass(TableScanRule.class);
+    hepProgramBuilder.addRuleClass(ProjectWindowTransposeRule.class);
     
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
      final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
@@ -140,6 +135,7 @@ public class QueryPlanner {
     this.hepPlanner.addRule(JoinProjectTransposeRule.BOTH_PROJECT);
     this.hepPlanner.addRule(ProjectFilterTransposeRule.INSTANCE);
     this.hepPlanner.addRule(ProjectTableScanRule.INSTANCE);
+    this.hepPlanner.addRule(ProjectWindowTransposeRule.INSTANCE);
     //aggregate rules
     this.hepPlanner.addRule(AggregateRemoveRule.INSTANCE);
     this.hepPlanner.addRule(AggregateJoinTransposeRule.EXTENDED);

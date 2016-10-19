@@ -49,6 +49,8 @@ public class PhysicalRuleConverter {
 	
 	public Pair<Integer, String> convert (RelNode logicalPlan) {
 		
+		//Log has to be updated in a better way.
+		
 		//log.info("Convert logical plan");
 		log.info(String.format("Root is %s", logicalPlan.toString()));
 		
@@ -82,9 +84,9 @@ public class PhysicalRuleConverter {
 			String tableKey = chainTail.getTable().getQualifiedName().toString().replace("[", "").replace("]", "").replace(", ", ".");
 			Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
 			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), null, pair.left, chainTail.getId(), timestampReference);	    
-		    	SaberRule rule = operation.construct();
-		    	Query query = rule.getQuery();
-		    	ITupleSchema outputSchema = rule.getOutputSchema();
+			SaberRule rule = operation.construct();
+			Query query = rule.getQuery();
+			ITupleSchema outputSchema = rule.getOutputSchema();
 			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,pair.right.left,false,false));
 			System.out.println("OutputSchema : " + outputSchema.getSchema());
 			
@@ -110,28 +112,33 @@ public class PhysicalRuleConverter {
 				args = logicalPlan.getDescription().replace("input="+logicalPlan.getInput(0).toString()+",", "");
 				args = args.substring(args.indexOf("("));
 				//System.out.println(args);				
+			} else
+			if (logicalPlan.getRelTypeName().equals("LogicalWindow")) {
+				System.err.println("LogicalWindow is not supported yet.");
+				System.exit(1);
 			} else {
 				System.err.println("Not supported operator.");
+				System.exit(1);
 			}
 			
 			ChainOfRules chain = chains.get(node.left);
-		    	RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, chain.getOutputSchema(), queryId, timestampReference);
-		    	SaberRule rule = operation.construct();
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, chain.getOutputSchema(), queryId, timestampReference);
+			SaberRule rule = operation.construct();
 		    
 			if (logicalPlan.getRelTypeName().equals("LogicalAggregate")) {
 				aggregates.add(rule);
 			}
 		    
-		    	Query query = rule.getQuery();
+			Query query = rule.getQuery();
 			System.out.println("Current query id : "+ query.getId());
-		    	queryId++; //increment the queryId for the next query
+			queryId++; //increment the queryId for the next query
 			if (!(node.right.equals("LogicalTableScan"))) {
 			    chain.getQuery().connectTo(query);
 			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,false));
 			} else {
 				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,true));
 			}
-		    	queries.add(query);		    		    		   		    
+			queries.add(query);		    		    		   		    
 			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
 			
 			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
@@ -152,11 +159,11 @@ public class PhysicalRuleConverter {
 			ChainOfRules rightChain = chains.get(rightNode.left);
 			
 			String args = logicalPlan.getChildExps().toString();
-		    	RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference);
-		    	SaberRule rule = operation.construct();		    
-		    	Query query = rule.getQuery();
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference);
+			SaberRule rule = operation.construct();
+			Query query = rule.getQuery();
 			System.out.println("Current query id : "+ query.getId());
-		    	queryId++; //increment the queryId for the next query
+			queryId++; //increment the queryId for the next query
 			if ((!(leftNode.right.equals("LogicalTableScan"))) && (!(rightNode.right.equals("LogicalTableScan")))) {
 			    leftChain.getQuery().connectTo(query);
 			    rightChain.getQuery().connectTo(query);
@@ -173,7 +180,7 @@ public class PhysicalRuleConverter {
 				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),leftChain.getData(), rightChain.getData(),true,true,true));
 			}
 			
-		    	queries.add(query);		   		
+			queries.add(query);		   		
 			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
 											
 			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
