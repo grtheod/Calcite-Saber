@@ -38,9 +38,9 @@ public class Tester {
 		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));
 		
 		/* Create a schema in Saber from a given SchemaPlus and add some mock data for testing.*/
-		DataGenerator dataGenerator = new DataGenerator().
-										setSchema(schema, true).
-										build();
+		DataGenerator dataGenerator = new DataGenerator()
+						.setSchema(schema, true)
+						.build();
 		
 		Statement statement = connection.createStatement();
 		
