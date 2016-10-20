@@ -221,6 +221,7 @@ public class PhysicalRuleConverter {
 						if(c.getValue().getFlag() == false) {
 							application.processData (c.getValue().getData());
 						} else {
+							/*the first case doen't work.*/
 							if(c.getValue().getHasMore() == true) {
 								application.processSecondStream (c.getValue().getData());
 							} else {
