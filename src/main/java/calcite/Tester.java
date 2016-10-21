@@ -80,9 +80,9 @@ public class Tester {
 		long timestampReference = System.nanoTime();
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
-		//physicalPlan.convert (logicalPlan);
+		physicalPlan.convert (logicalPlan);
 		
-		//physicalPlan.execute();
+		physicalPlan.execute();
 		
 		/*
 		 * Notes:
