@@ -56,13 +56,13 @@ public class Tester {
 		 * ... 
 		 * */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
-				"select s.orders.productid , sum(units) "
-				+ "from s.orders, s.products "
-				+ "where s.orders.productid = s.products.productid "
-				+ "group by s.orders.productid"
+				"select s.orders.productid  "
+				+ "from  s.products, s.customers,s.orders "
+				+ "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
+				+ " and units>5 "
 				);
 				
-		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
+		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
 		
 		/*Set System Configuration.*/
 		SystemConf sconf = new SystemConfig()
@@ -80,9 +80,9 @@ public class Tester {
 		long timestampReference = System.nanoTime();
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
-		physicalPlan.convert (logicalPlan);
+		//physicalPlan.convert (logicalPlan);
 		
-		physicalPlan.execute();
+		//physicalPlan.execute();
 		
 		/*
 		 * Notes:

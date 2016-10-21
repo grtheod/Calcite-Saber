@@ -30,8 +30,15 @@ import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
+import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
+import org.apache.calcite.rel.rules.JoinToMultiJoinRule;
+import org.apache.calcite.rel.rules.LoptJoinTree;
+import org.apache.calcite.rel.rules.LoptOptimizeJoinRule;
+import org.apache.calcite.rel.rules.MultiJoin;
+import org.apache.calcite.rel.rules.MultiJoinOptimizeBushyRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
+import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
@@ -108,6 +115,11 @@ public class QueryPlanner {
     hepProgramBuilder.addRuleClass(AggregateProjectPullUpConstantsRule.class);
     hepProgramBuilder.addRuleClass(TableScanRule.class);
     hepProgramBuilder.addRuleClass(ProjectWindowTransposeRule.class);
+    hepProgramBuilder.addRuleClass(LoptOptimizeJoinRule.class);
+    hepProgramBuilder.addRuleClass(MultiJoinOptimizeBushyRule.class);
+    hepProgramBuilder.addRuleClass(JoinPushThroughJoinRule.class);
+    hepProgramBuilder.addRuleClass(JoinToMultiJoinRule.class);
+    hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
     
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
      final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
@@ -133,14 +145,21 @@ public class QueryPlanner {
     this.hepPlanner.addRule(ProjectRemoveRule.INSTANCE);
     this.hepPlanner.addRule(ProjectJoinTransposeRule.INSTANCE);
     this.hepPlanner.addRule(JoinProjectTransposeRule.BOTH_PROJECT);
-    this.hepPlanner.addRule(ProjectFilterTransposeRule.INSTANCE);
+    //this.hepPlanner.addRule(ProjectFilterTransposeRule.INSTANCE); /*it is better to use filter first an then project*/
     this.hepPlanner.addRule(ProjectTableScanRule.INSTANCE);
     this.hepPlanner.addRule(ProjectWindowTransposeRule.INSTANCE);
+    this.hepPlanner.addRule(ProjectMergeRule.INSTANCE);
     //aggregate rules
     this.hepPlanner.addRule(AggregateRemoveRule.INSTANCE);
     this.hepPlanner.addRule(AggregateJoinTransposeRule.EXTENDED);
     this.hepPlanner.addRule(AggregateProjectMergeRule.INSTANCE);
     this.hepPlanner.addRule(AggregateProjectPullUpConstantsRule.INSTANCE);
+    //join rules
+    //this.hepPlanner.addRule(JoinToMultiJoinRule.INSTANCE);
+    this.hepPlanner.addRule(LoptOptimizeJoinRule.INSTANCE);
+    //this.hepPlanner.addRule(MultiJoinOptimizeBushyRule.INSTANCE);
+    this.hepPlanner.addRule(JoinPushThroughJoinRule.LEFT);
+
     // simplify expressions rules
     //this.hepPlanner.addRule(ReduceExpressionsRule.CALC_INSTANCE);
     this.hepPlanner.addRule(ReduceExpressionsRule.FILTER_INSTANCE);
@@ -151,7 +170,7 @@ public class QueryPlanner {
     this.hepPlanner.addRule(PruneEmptyRules.AGGREGATE_INSTANCE);
     this.hepPlanner.addRule(PruneEmptyRules.JOIN_LEFT_INSTANCE);    
     this.hepPlanner.addRule(PruneEmptyRules.JOIN_RIGHT_INSTANCE);
-    
+
     
   }
 
