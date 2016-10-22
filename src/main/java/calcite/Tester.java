@@ -56,11 +56,11 @@ public class Tester {
 		 * ... 
 		 * */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
-				"select s.orders.productid  "
-				+ "from  s.products, s.customers,s.orders "
-				+ "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
-				+ " and units>5 "
-				);
+		        "select s.orders.productid  "
+		        + "from s.products,s.customers,s.orders "
+		        + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
+		        + "and units>5 "
+		        );
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
 		
@@ -80,9 +80,9 @@ public class Tester {
 		long timestampReference = System.nanoTime();
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
-		physicalPlan.convert (logicalPlan);
+		//physicalPlan.convert (logicalPlan);
 		
-		physicalPlan.execute();
+		//physicalPlan.execute();
 		
 		/*
 		 * Notes:

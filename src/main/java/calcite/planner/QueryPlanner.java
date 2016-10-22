@@ -30,6 +30,7 @@ import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
+import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.JoinToMultiJoinRule;
 import org.apache.calcite.rel.rules.LoptJoinTree;
@@ -120,6 +121,7 @@ public class QueryPlanner {
     hepProgramBuilder.addRuleClass(JoinPushThroughJoinRule.class);
     hepProgramBuilder.addRuleClass(JoinToMultiJoinRule.class);
     hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
+    hepProgramBuilder.addRuleClass(JoinPushExpressionsRule.class);
     
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
      final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
@@ -132,6 +134,7 @@ public class QueryPlanner {
      arbitrary, so if more control is needed, use addRuleInstance instead.*/
 
     //starting rules      
+    /*Unlike select operators, window operators should be pushed up*/
     this.hepPlanner.addRule(ProjectToWindowRule.PROJECT);
     //this.hepPlanner.addRule(TableScanRule.INSTANCE);
     
@@ -140,8 +143,10 @@ public class QueryPlanner {
     this.hepPlanner.addRule(FilterProjectTransposeRule.INSTANCE);
     this.hepPlanner.addRule(FilterMergeRule.INSTANCE);
     this.hepPlanner.addRule(FilterJoinRule.FILTER_ON_JOIN);
+    this.hepPlanner.addRule(FilterJoinRule.JOIN); /*push filter into the children of a join*/
     this.hepPlanner.addRule(FilterTableScanRule.INSTANCE);
     // push and merge projection rules
+    /*check the effectiveness of pushing down projections*/
     this.hepPlanner.addRule(ProjectRemoveRule.INSTANCE);
     this.hepPlanner.addRule(ProjectJoinTransposeRule.INSTANCE);
     this.hepPlanner.addRule(JoinProjectTransposeRule.BOTH_PROJECT);
@@ -154,12 +159,16 @@ public class QueryPlanner {
     this.hepPlanner.addRule(AggregateJoinTransposeRule.EXTENDED);
     this.hepPlanner.addRule(AggregateProjectMergeRule.INSTANCE);
     this.hepPlanner.addRule(AggregateProjectPullUpConstantsRule.INSTANCE);
-    //join rules
-    //this.hepPlanner.addRule(JoinToMultiJoinRule.INSTANCE);
-    this.hepPlanner.addRule(LoptOptimizeJoinRule.INSTANCE);
+    //join rules    
+    /*A simple trick is to consider a window size equal to stream cardinality.
+     * For tuple-based windows, the window size is equal to the number of tuples.
+     * For time-based windows, the window size is equal to the (input_rate*time_of_window).*/
+    //this.hepPlanner.addRule(JoinToMultiJoinRule.INSTANCE); 
+    //this.hepPlanner.addRule(LoptOptimizeJoinRule.INSTANCE); 
     //this.hepPlanner.addRule(MultiJoinOptimizeBushyRule.INSTANCE);
-    this.hepPlanner.addRule(JoinPushThroughJoinRule.LEFT);
-
+    //this.hepPlanner.addRule(JoinPushThroughJoinRule.RIGHT);
+    this.hepPlanner.addRule(JoinPushThroughJoinRule.LEFT); /*choose between right and left*/
+    this.hepPlanner.addRule(JoinPushExpressionsRule.INSTANCE);
     // simplify expressions rules
     //this.hepPlanner.addRule(ReduceExpressionsRule.CALC_INSTANCE);
     this.hepPlanner.addRule(ReduceExpressionsRule.FILTER_INSTANCE);
