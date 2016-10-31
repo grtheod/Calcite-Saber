@@ -118,11 +118,11 @@
   	</dependency>
   	
  	<dependency>
-       	<groupId>org.apache.calcite</groupId>
-        <artifactId>calcite-core</artifactId>
-        <version>1.10.0</version>
-    </dependency>  
-    <!-- https://mvnrepository.com/artifact/org.apache.calcite/calcite-linq4j -->
+       		<groupId>org.apache.calcite</groupId>
+        	<artifactId>calcite-core</artifactId>
+        	<version>1.10.0</version>
+    	</dependency>  
+    	<!-- https://mvnrepository.com/artifact/org.apache.calcite/calcite-linq4j -->
 	<dependency>
 	    <groupId>org.apache.calcite</groupId>
 	    <artifactId>calcite-linq4j</artifactId>
@@ -133,10 +133,7 @@
 	    <groupId>org.apache.calcite</groupId>
 	    <artifactId>calcite-example-csv</artifactId>
 	    <version>1.10.0</version>
-	</dependency>
-     
-     
-     	
+	</dependency>               	
   </dependencies>
   
   
