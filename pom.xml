@@ -117,12 +117,12 @@
   		<version>2.5</version>
   	</dependency>
   	
- 	 <dependency>
+ 	<dependency>
        	<groupId>org.apache.calcite</groupId>
         <artifactId>calcite-core</artifactId>
         <version>1.10.0</version>
-     </dependency>  
-     <!-- https://mvnrepository.com/artifact/org.apache.calcite/calcite-linq4j -->
+    </dependency>  
+    <!-- https://mvnrepository.com/artifact/org.apache.calcite/calcite-linq4j -->
 	<dependency>
 	    <groupId>org.apache.calcite</groupId>
 	    <artifactId>calcite-linq4j</artifactId>
