@@ -66,6 +66,8 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import calcite.cost.SaberCostBase;
+import calcite.cost.SaberRelOptCostFactory;
 import calcite.planner.QueryPlanner;
 import calcite.planner.SaberRelDataTypeSystem;
 import calcite.planner.SaberRuleSets;
@@ -95,10 +97,11 @@ public class VolcanoTester {
 	    
 	    new VolcanoTester(schema);
 	    RelNode rel = getLogicalPlan(
-		        "select s.products.productid "
+		        "select s.orders.productid,count(*) "
 		        + "from s.products,s.customers,s.orders "
 		        + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
 		        + "and units>5 "
+		        + "group by s.orders.productid"
 		        );
 	    
 	    RelTraitSet traitSet = planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);	
@@ -190,6 +193,7 @@ public class VolcanoTester {
 	        		EnumerableRules.ENUMERABLE_WINDOW_RULE
 	        		);
 
+		    SaberRelOptCostFactory saberCostFactory = new SaberCostBase.SaberCostFactory(); //custom factory with rates
 		    FrameworkConfig config = Frameworks.newConfigBuilder()
 		        .parserConfig(SqlParser.configBuilder()
 		            .setLex(Lex.MYSQL)
@@ -199,7 +203,7 @@ public class VolcanoTester {
 		        .traitDefs(traitDefs)
 		        .context(Contexts.EMPTY_CONTEXT)
 		        .ruleSets(SaberRuleSets.getRuleSets())
-		        .costFactory(null) //If null, use the default cost factory for that planner.
+		        .costFactory(saberCostFactory) //If null, use the default cost factory for that planner.
 		        .typeSystem(SaberRelDataTypeSystem.SABER_REL_DATATYPE_SYSTEM)
 		        .programs(program)		        		        
 		        .build();
