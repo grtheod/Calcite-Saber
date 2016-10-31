@@ -45,7 +45,7 @@ public class OrdersTableFactory implements TableFactory<Table>  {
 		    {3, 1, 12, 2},
 		    {4, 9, 3, 3},
 		    {5, 10, 3, 1},
-	            {6, 3, 13, 7},
+		    {6, 3, 13, 7},
 		    {7, 7, 15, 5},
 		    {8, 1, 2, 3},
 		    {9, 9, 3, 2},
@@ -84,7 +84,7 @@ public class OrdersTableFactory implements TableFactory<Table>  {
 
 		public Statistic getStatistic() {
 			int rowCount = rows.size();
-			return Statistics.of(rowCount, null); //add List<ImmutableBitSet>
+			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of()); //add List<ImmutableBitSet>
 		}
 
 		public Schema.TableType getJdbcTableType() {

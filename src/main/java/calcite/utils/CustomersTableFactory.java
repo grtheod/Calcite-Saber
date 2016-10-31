@@ -77,7 +77,7 @@ public class CustomersTableFactory implements TableFactory<Table>  {
 
 		public Statistic getStatistic() {
 			int rowCount = rows.size();
-			return Statistics.of(rowCount, null); //add List<ImmutableBitSet>
+			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of()); //add List<ImmutableBitSet>
 		}
 
 		public Schema.TableType getJdbcTableType() {

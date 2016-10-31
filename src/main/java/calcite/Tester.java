@@ -55,8 +55,9 @@ public class Tester {
 		 * GROUP BY table1.attrx, ... 
 		 * ... 
 		 * */
+		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
-		        "select s.orders.productid  "
+		        "select s.products.productid "
 		        + "from s.products,s.customers,s.orders "
 		        + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
 		        + "and units>5 "

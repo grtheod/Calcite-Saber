@@ -6,10 +6,13 @@ import java.util.List;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.hep.HepMatchOrder;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
+import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttleImpl;
@@ -55,12 +58,15 @@ import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.Planner;
+import org.apache.calcite.tools.Program;
+import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import calcite.planner.logical.JoinToSaberJoinRule;
 import calcite.planner.physical.SaberLogicalConvention;
 
 /**
@@ -123,6 +129,9 @@ public class QueryPlanner {
     hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
     hepProgramBuilder.addRuleClass(JoinPushExpressionsRule.class);
     
+    hepProgramBuilder.addRuleClass(JoinToSaberJoinRule.class);
+
+    //hepProgramBuilder.addMatchOrder(HepMatchOrder.ARBITRARY);
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
      final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
       	with the option to keep the graph a tree(noDAG=true) or allow DAG(noDAG=false).
@@ -179,6 +188,8 @@ public class QueryPlanner {
     this.hepPlanner.addRule(PruneEmptyRules.AGGREGATE_INSTANCE);
     this.hepPlanner.addRule(PruneEmptyRules.JOIN_LEFT_INSTANCE);    
     this.hepPlanner.addRule(PruneEmptyRules.JOIN_RIGHT_INSTANCE);
+    
+    //this.hepPlanner.addRule(JoinToSaberJoinRule.INSTANCE);
 
     
   }
@@ -201,8 +212,9 @@ public class QueryPlanner {
   }
 
   public RelNode convertToRelNode(SqlNode sqlNode) throws RelConversionException {
-    final RelNode convertedNode = planner.convert(sqlNode);
-
+	  
+	final RelNode convertedNode = planner.convert(sqlNode);    
+    
     final RelMetadataProvider provider = convertedNode.getCluster().getMetadataProvider();
 
     // Register RelMetadataProvider with HepPlanner.
@@ -261,6 +273,12 @@ public class QueryPlanner {
     SqlNode validatedSqlNode = planner.validate(sqlNode);
       
     RelNode beforeplan= convertToRelNode(validatedSqlNode);   
+   
+    //use Volcano Planner to conver nodes
+    //RelTraitSet traitSet = beforeplan.getTraitSet();
+    //traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
+    //beforeplan = planner.transform(0, traitSet, beforeplan);       
+    
     //compute cost
     final RelMetadataQuery mq = RelMetadataQuery.instance();
     //RelMetadataQuery.THREAD_PROVIDERS.set( JaninoRelMetadataProvider.of(new MyRelMetadataProvider()));
