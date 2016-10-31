@@ -15,8 +15,8 @@ public class SaberStatistics {
 	}
 
 	/** Returns a {@link Statistic} that knows nothing about a table. */
-	public static final Statistic UNKNOWN =
-	  new Statistic() {
+	public static final SaberStatistic UNKNOWN =
+	  new SaberStatistic() {
 	    public Double getRowCount() {
 	      return null;
 	    }
@@ -32,21 +32,25 @@ public class SaberStatistics {
 	    public RelDistribution getDistribution() {
 	      return RelDistributionTraitDef.INSTANCE.getDefault();
 	    }
+	    
+	    public Double getRate() {
+	    	return null;
+	    }
   	};
 
 	/** Returns a statistic with a given row count and set of unique keys. */
-	public static Statistic of(final double rowCount,
-	  final List<ImmutableBitSet> keys) {
-		return of(rowCount, keys, ImmutableList.<RelCollation>of());
+	public static SaberStatistic of(final double rowCount,
+	  final List<ImmutableBitSet> keys, final double rate) {
+		return of(rowCount, keys, ImmutableList.<RelCollation>of(), rate);
 	}
 
 	/** Returns a statistic with a given row count and set of unique keys. */
-	public static Statistic of(final double rowCount,
-	  final List<ImmutableBitSet> keys, final List<RelCollation> collations) {
-			return new Statistic() {
-		  		public Double getRowCount() {
+	public static SaberStatistic of(final double rowCount,
+	  final List<ImmutableBitSet> keys, final List<RelCollation> collations, final double rate) {
+		return new SaberStatistic() {
+		  public Double getRowCount() {
 		    		return rowCount;
-		  		}
+		  }
 
 		  public boolean isKey(ImmutableBitSet columns) {
 		    for (ImmutableBitSet key : keys) {
@@ -63,6 +67,10 @@ public class SaberStatistics {
 
 		  public RelDistribution getDistribution() {
 		    return RelDistributionTraitDef.INSTANCE.getDefault();
+		  }
+		  
+		  public Double getRate() {
+		    return rate;
 		  }
 		};
 	}
