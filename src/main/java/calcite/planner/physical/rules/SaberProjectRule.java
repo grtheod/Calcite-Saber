@@ -32,7 +32,7 @@ import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
 import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
 import uk.ac.imperial.lsds.saber.cql.operators.cpu.Projection;
 import uk.ac.imperial.lsds.saber.cql.operators.gpu.ProjectionKernel;
-
+/*Wrong result after join*/
 public class SaberProjectRule implements SaberRule {
 	public static final String usage = "usage: Projection";
 	String args;

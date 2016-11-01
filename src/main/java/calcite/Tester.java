@@ -12,6 +12,7 @@ import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlExplainLevel;
 
 import calcite.planner.QueryPlanner;
+import calcite.planner.SaberPlanner;
 import calcite.planner.physical.PhysicalRuleConverter;
 import calcite.planner.physical.SystemConfig;
 import calcite.utils.CustomersTableFactory;
@@ -58,7 +59,7 @@ public class Tester {
 		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
 		        "select s.products.productid "
-		        + "from s.products,s.customers,s.orders "
+		        + "from s.customers,s.orders,s.products "
 		        + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
 		        + "and units>5 "
 		        );

@@ -2,7 +2,10 @@ package calcite.planner;
 
 import java.util.Iterator;
 
+import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
+import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
@@ -19,14 +22,7 @@ public class SaberRuleSets {
 	   */
 	  private static final ImmutableSet<RelOptRule> calciteToSaberConversionRules =
 	      ImmutableSet.<RelOptRule>builder().add(
-	          /*SortRemoveRule.INSTANCE,
-	          AbstractConverter.ExpandConversionRule.INSTANCE,
-	          SaberScanRule.INSTANCE,
-	          SaberFilterRule.INSTANCE,
-	          SaberProjectRule.INSTANCE,	          	          
-	          SaberAggregateRule.INSTANCE,
-	          SaberJoinRule.INSTANCE,
-	          */
+
 	      ).build();
 
 	  public static RuleSet[] getRuleSets() {

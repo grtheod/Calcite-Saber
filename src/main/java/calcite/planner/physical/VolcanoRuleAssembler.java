@@ -13,13 +13,14 @@ import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
 import uk.ac.imperial.lsds.saber.SystemConf;
 
-public class RuleAssembler {
+public class VolcanoRuleAssembler {
 	
 	protected static final String PROJECT= "LogicalProject";
-	protected static final String FILTER = "LogicalFilter";
-	protected static final String JOIN = "LogicalJoin";
-	protected static final String AGGREGATE = "LogicalAggregate";
-	protected static final String SCAN = "LogicalTableScan";
+	protected static final String ENUMERABLE_PROJECT= "EnumerableProject";
+	protected static final String ENUMERABLE_FILTER = "EnumerableFilter";	
+	protected static final String ENUMERABLE_JOIN = "EnumerableJoin";
+	protected static final String ENUMERABLE_AGGREGATE = "EnumerableAggregate";
+	protected static final String ENUMERABLE_SCAN = "EnumerableTableScan";
 	
 	String operator;
 	String args;
@@ -27,7 +28,7 @@ public class RuleAssembler {
 	int queryId;
 	long timestampReference;
 	
-	public RuleAssembler(String operator, String args, ITupleSchema schema, int queryId, long timestampReference){
+	public VolcanoRuleAssembler(String operator, String args, ITupleSchema schema, int queryId, long timestampReference){
 		this.operator = operator;
 		this.args = args;
 		this.schema1 = schema;
@@ -35,7 +36,7 @@ public class RuleAssembler {
 		this.timestampReference = timestampReference;
 	}
 	
-	public RuleAssembler(String operator, String args, ITupleSchema schema1, ITupleSchema schema2, int queryId, long timestampReference){
+	public VolcanoRuleAssembler(String operator, String args, ITupleSchema schema1, ITupleSchema schema2, int queryId, long timestampReference){
 		this.operator = operator;
 		this.args = args;
 		this.schema1 = schema1;
@@ -50,26 +51,27 @@ public class RuleAssembler {
 		ITupleSchema outputSchema = null;
 		switch (operator){			
 			case PROJECT :
+			case ENUMERABLE_PROJECT :
 				System.out.println("==> Assembling Projection");
 				SaberProjectRule project = new SaberProjectRule(schema1, args, queryId, timestampReference);
 				project.prepareRule();				
 				return project;
-			case FILTER :
+			case ENUMERABLE_FILTER :
 				System.out.println("==> Assembling Filter");
 				SaberFilterRule filter = new SaberFilterRule(schema1, args, queryId, timestampReference);
 				filter.prepareRule();				
-				return filter;
-			case JOIN :
+				return filter;			
+			case ENUMERABLE_JOIN :
 				System.out.println("==> Assembling Join");
 				SaberJoinRule join = new SaberJoinRule(schema1, schema2, args, queryId, timestampReference);
 				join.prepareRule();				
-				return join;				
-			case AGGREGATE :				
+				return join;							
+			case ENUMERABLE_AGGREGATE : 				
 				System.out.println("==> Assembling Aggregate");
 				SaberAggregateRule aggregate = new SaberAggregateRule(schema1, args, queryId, timestampReference);
 				aggregate.prepareRule();				
-				return aggregate;	
-			case SCAN :
+				return aggregate;			
+			case ENUMERABLE_SCAN :
 				System.out.println("==> Assembling Scan");
 				SaberScanRule scan = new SaberScanRule(schema1);
 				scan.prepareRule();				

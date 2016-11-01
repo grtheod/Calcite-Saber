@@ -32,6 +32,7 @@ import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
+import org.apache.calcite.rel.rules.JoinAssociateRule;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
@@ -188,7 +189,9 @@ public class QueryPlanner {
     this.hepPlanner.addRule(PruneEmptyRules.AGGREGATE_INSTANCE);
     this.hepPlanner.addRule(PruneEmptyRules.JOIN_LEFT_INSTANCE);    
     this.hepPlanner.addRule(PruneEmptyRules.JOIN_RIGHT_INSTANCE);
-    
+    //JoinAssociateRule.INSTANCE,
+    //AggregateExpandDistinctAggregatesRule.INSTANCE,
+    //AggregateReduceFunctionsRule.INSTANCE,
     //this.hepPlanner.addRule(JoinToSaberJoinRule.INSTANCE);
 
     

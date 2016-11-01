@@ -135,29 +135,14 @@ public class SaberCostBase implements SaberRelOptCost {
 
 	@Override
 	public boolean isLe(RelOptCost other) {
-	    SaberCostBase that = (SaberCostBase) other;
-	    if (this.rate == that.rate)
-	    	return this == that
-	    	|| ( (this.cpu + this.io + this.network)
-	    		<= (that.cpu + that.io + that.network));
-	    else 
-	    if (this.rate < that.rate)
-	    	return true;
-	    else
-	    	return false;	    
+	    return isLt(other) || equals(other);
 	}
 
 	@Override
 	public boolean isLt(RelOptCost other) {
 	    SaberCostBase that = (SaberCostBase) other;
-	    if (this.rate == that.rate)
-	    	return  ( (this.cpu + this.io + this.network)
-	    		< (that.cpu + that.io + that.network) );
-	    else 
-	    if (this.rate < that.rate)
-	    	return true;
-	    else
-	    	return false;
+	    return ((this.cpu + this.io + this.network)
+	    	< (that.cpu + that.io + that.network)); //change the way they are compared
 	}
 
 	@Override
@@ -263,6 +248,8 @@ public class SaberCostBase implements SaberRelOptCost {
 	    }
 
 	    public RelOptCost makeCost(double dRows, double dCpu, double dIo) {
+	      //if (Math.round(dRows)==Math.round(dCpu))
+	    	//  return new SaberCostBase(0, 0, dIo, dRows, 0);
 	      return new SaberCostBase(dRows, dCpu, dIo, dRows, 0);
 	    }
 
