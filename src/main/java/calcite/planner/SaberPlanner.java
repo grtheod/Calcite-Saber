@@ -25,9 +25,11 @@ import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.AggregateProjectPullUpConstantsRule;
+import org.apache.calcite.rel.rules.AggregateReduceFunctionsRule;
 import org.apache.calcite.rel.rules.AggregateRemoveRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
 import org.apache.calcite.rel.rules.FilterJoinRule;
@@ -71,7 +73,12 @@ import com.google.common.collect.Lists;
 
 import calcite.cost.SaberCostBase;
 import calcite.cost.SaberRelOptCostFactory;
-import calcite.planner.logical.JoinToSaberJoinRule;
+import calcite.planner.logical.EnumerableAggregateToLogicalAggregateRule;
+import calcite.planner.logical.EnumerableFilterToLogicalFilterRule;
+import calcite.planner.logical.EnumerableJoinToLogicalJoinRule;
+import calcite.planner.logical.EnumerableProjectToLogicalProjectRule;
+import calcite.planner.logical.EnumerableTableScanToLogicalTableScanRule;
+import calcite.planner.logical.EnumerableWindowToLogicalWindowRule;
 import calcite.planner.physical.SaberLogicalConvention;
 
 /**
@@ -92,22 +99,69 @@ public class SaberPlanner {
     traitDefs.add(ConventionTraitDef.INSTANCE);
     traitDefs.add(RelCollationTraitDef.INSTANCE);
     
-    Program program =Programs.ofRules(
-    		//ProjectMergeRule.INSTANCE,
-    		//ProjectRemoveRule.INSTANCE,
-            //ProjectJoinTransposeRule.INSTANCE,
-            //JoinProjectTransposeRule.BOTH_PROJECT,
-            JoinPushThroughJoinRule.RIGHT,
-            JoinPushThroughJoinRule.LEFT, 
-            JoinPushExpressionsRule.INSTANCE,
-            JoinAssociateRule.INSTANCE,
-            /*Enumerable Rules*/
-            EnumerableRules.ENUMERABLE_FILTER_RULE,
-            EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-            EnumerableRules.ENUMERABLE_PROJECT_RULE,
-            EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
-            EnumerableRules.ENUMERABLE_JOIN_RULE,
-            EnumerableRules.ENUMERABLE_WINDOW_RULE
+    Program program =Programs.ofRules(    		
+    	    ProjectToWindowRule.PROJECT,
+    	    //TableScanRule.INSTANCE
+    	    
+    	    /*Unlike select operators, window operators should be pushed up*/
+    	    
+    	    // push and merge filter rules
+    	    FilterAggregateTransposeRule.INSTANCE,
+    	    FilterProjectTransposeRule.INSTANCE,
+    	    FilterMergeRule.INSTANCE,
+    	    FilterJoinRule.FILTER_ON_JOIN,
+    	    FilterJoinRule.JOIN, /*push filter into the children of a join*/
+    	    FilterTableScanRule.INSTANCE,
+    	    
+    	    // push and merge projection rules
+    	    /*check the effectiveness of pushing down projections*/
+    	    ProjectRemoveRule.INSTANCE,
+    	    //ProjectJoinTransposeRule.INSTANCE, /*it is implemented in hepPlanner*/
+    	    //JoinProjectTransposeRule.BOTH_PROJECT,
+    	    //ProjectFilterTransposeRule.INSTANCE, /*it is better to use filter first an then project*/
+    	    ProjectTableScanRule.INSTANCE,
+    	    ProjectWindowTransposeRule.INSTANCE, /*maybe it has to be implemented in hepPlanner*/
+    	    ProjectMergeRule.INSTANCE,
+    	    
+    	    //aggregate rules
+    	    AggregateRemoveRule.INSTANCE,
+    	    AggregateJoinTransposeRule.EXTENDED,
+    	    AggregateProjectMergeRule.INSTANCE,
+    	    AggregateProjectPullUpConstantsRule.INSTANCE,
+            AggregateExpandDistinctAggregatesRule.INSTANCE,
+            AggregateReduceFunctionsRule.INSTANCE, /*Has to be implemented in a better way.*/
+            //AggregateExpandDistinctAggregatesRule.JOIN,
+            
+            //join rules    
+    	    /*A simple trick is to consider a window size (or better input rate) equal to stream cardinality.
+    	     * For tuple-based windows, the window size is equal to the number of tuples.
+    	     * For time-based windows, the window size is equal to the (input_rate*time_of_window).*/
+    	    //JoinToMultiJoinRule.INSTANCE ,
+    	    //LoptOptimizeJoinRule.INSTANCE ,
+    	    //MultiJoinOptimizeBushyRule.INSTANCE,
+    	    JoinPushThroughJoinRule.RIGHT,
+    	    JoinPushThroughJoinRule.LEFT, /*choose between right and left*/
+    	    JoinPushExpressionsRule.INSTANCE,
+    	    JoinAssociateRule.INSTANCE,
+    	    //JoinCommuteRule.INSTANCE,
+    	    
+    	    // simplify expressions rules    	    
+    	    ReduceExpressionsRule.FILTER_INSTANCE,
+    	    ReduceExpressionsRule.PROJECT_INSTANCE,
+    	    // prune empty results rules   
+    	    PruneEmptyRules.FILTER_INSTANCE,
+    	    PruneEmptyRules.PROJECT_INSTANCE,
+    	    PruneEmptyRules.AGGREGATE_INSTANCE,
+    	    PruneEmptyRules.JOIN_LEFT_INSTANCE,    
+    	    PruneEmptyRules.JOIN_RIGHT_INSTANCE,
+    	    
+    	    /*Enumerable Rules*/
+    		EnumerableRules.ENUMERABLE_FILTER_RULE,
+    		EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
+    		EnumerableRules.ENUMERABLE_PROJECT_RULE,
+    		EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
+    		EnumerableRules.ENUMERABLE_JOIN_RULE,
+    		EnumerableRules.ENUMERABLE_WINDOW_RULE
             );
     
     SaberRelOptCostFactory saberCostFactory = new SaberCostBase.SaberCostFactory(); //custom factory with rates
@@ -120,121 +174,55 @@ public class SaberPlanner {
         .traitDefs(traitDefs)
         .context(Contexts.EMPTY_CONTEXT)
         .ruleSets(SaberRuleSets.getRuleSets())
-        .costFactory(null) //If null, use the default cost factory for that planner.
+        .costFactory(saberCostFactory) //If null, use the default cost factory for that planner.
         .typeSystem(SaberRelDataTypeSystem.SABER_REL_DATATYPE_SYSTEM)
         .programs(program)
         .build();
     this.planner = Frameworks.getPlanner(config);
-    //AggregateExpandDistinctAggregatesRule.INSTANCE,
-    //AggregateReduceFunctionsRule.INSTANCE,
 
     // Create hep planner for optimizations.
     HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
-    hepProgramBuilder.addRuleClass(ReduceExpressionsRule.class);
-    //hepProgramBuilder.addRuleClass(PruneEmptyRules.class);
-    hepProgramBuilder.addRuleClass(FilterTableScanRule.class);
-    hepProgramBuilder.addRuleClass(FilterMergeRule.class);
-    hepProgramBuilder.addRuleClass(FilterProjectTransposeRule.class);
-    hepProgramBuilder.addRuleClass(FilterAggregateTransposeRule.class);
-    hepProgramBuilder.addRuleClass(FilterJoinRule.class);
-    hepProgramBuilder.addRuleClass(JoinProjectTransposeRule.class);
-    hepProgramBuilder.addRuleClass(ProjectToWindowRule.class);
+    hepProgramBuilder.addRuleClass(EnumerableJoinToLogicalJoinRule.class);
+    hepProgramBuilder.addRuleClass(EnumerableProjectToLogicalProjectRule.class);
+    hepProgramBuilder.addRuleClass(EnumerableFilterToLogicalFilterRule.class);
+    hepProgramBuilder.addRuleClass(EnumerableAggregateToLogicalAggregateRule.class);
+    hepProgramBuilder.addRuleClass(EnumerableWindowToLogicalWindowRule.class);
+    hepProgramBuilder.addRuleClass(EnumerableTableScanToLogicalTableScanRule.class);
+    hepProgramBuilder.addRuleClass(ProjectToWindowRule.class); 
     hepProgramBuilder.addRuleClass(ProjectJoinTransposeRule.class);
-    hepProgramBuilder.addRuleClass(ProjectTableScanRule.class);
-    hepProgramBuilder.addRuleClass(ProjectFilterTransposeRule.class);
     hepProgramBuilder.addRuleClass(ProjectRemoveRule.class);
-    hepProgramBuilder.addRuleClass(AggregateRemoveRule.class);
-    hepProgramBuilder.addRuleClass(AggregateJoinTransposeRule.class);
+    hepProgramBuilder.addRuleClass(ProjectTableScanRule.class);
+    hepProgramBuilder.addRuleClass(ProjectWindowTransposeRule.class); /*maybe it has to be implemented in hepPlanner*/
+    hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
     hepProgramBuilder.addRuleClass(AggregateProjectMergeRule.class);
     hepProgramBuilder.addRuleClass(AggregateProjectPullUpConstantsRule.class);
-    hepProgramBuilder.addRuleClass(TableScanRule.class);
-    hepProgramBuilder.addRuleClass(ProjectWindowTransposeRule.class);
-    hepProgramBuilder.addRuleClass(LoptOptimizeJoinRule.class);
-    hepProgramBuilder.addRuleClass(MultiJoinOptimizeBushyRule.class);
-    hepProgramBuilder.addRuleClass(JoinPushThroughJoinRule.class);
-    hepProgramBuilder.addRuleClass(JoinToMultiJoinRule.class);
-    hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
-    hepProgramBuilder.addRuleClass(JoinPushExpressionsRule.class);
     
-    hepProgramBuilder.addRuleClass(JoinToSaberJoinRule.class);
-
     //hepProgramBuilder.addMatchOrder(HepMatchOrder.ARBITRARY);
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
      final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
       	with the option to keep the graph a tree(noDAG=true) or allow DAG(noDAG=false).
      */
-
     this.hepPlanner = new HepPlanner(hepProgramBuilder.build());
     
     /*The order in which the rules within a collection will be attempted is
      arbitrary, so if more control is needed, use addRuleInstance instead.*/
-
-    //starting rules      
-    /*Unlike select operators, window operators should be pushed up*/
-    this.hepPlanner.addRule(ProjectToWindowRule.PROJECT);
-    //this.hepPlanner.addRule(TableScanRule.INSTANCE);
-    
-    // push and merge filter rules
-    this.hepPlanner.addRule(FilterAggregateTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(FilterProjectTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(FilterMergeRule.INSTANCE);
-    this.hepPlanner.addRule(FilterJoinRule.FILTER_ON_JOIN);
-    this.hepPlanner.addRule(FilterJoinRule.JOIN); /*push filter into the children of a join*/
-    this.hepPlanner.addRule(FilterTableScanRule.INSTANCE);
-    // push and merge projection rules
-    /*check the effectiveness of pushing down projections*/
-    this.hepPlanner.addRule(ProjectRemoveRule.INSTANCE);
+    this.hepPlanner.addRule(EnumerableJoinToLogicalJoinRule.INSTANCE);
+    this.hepPlanner.addRule(EnumerableProjectToLogicalProjectRule.INSTANCE);
+    this.hepPlanner.addRule(EnumerableFilterToLogicalFilterRule.INSTANCE);
+    this.hepPlanner.addRule(EnumerableAggregateToLogicalAggregateRule.INSTANCE);
+    this.hepPlanner.addRule(EnumerableTableScanToLogicalTableScanRule.INSTANCE);
+    this.hepPlanner.addRule(EnumerableWindowToLogicalWindowRule.INSTANCE);
+    this.hepPlanner.addRule(ProjectToWindowRule.INSTANCE); 
     this.hepPlanner.addRule(ProjectJoinTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(JoinProjectTransposeRule.BOTH_PROJECT);
-    //this.hepPlanner.addRule(ProjectFilterTransposeRule.INSTANCE); /*it is better to use filter first an then project*/
+    this.hepPlanner.addRule(ProjectRemoveRule.INSTANCE);
     this.hepPlanner.addRule(ProjectTableScanRule.INSTANCE);
-    this.hepPlanner.addRule(ProjectWindowTransposeRule.INSTANCE);
+    this.hepPlanner.addRule(ProjectWindowTransposeRule.INSTANCE); 
     this.hepPlanner.addRule(ProjectMergeRule.INSTANCE);
-    //aggregate rules
-    this.hepPlanner.addRule(AggregateRemoveRule.INSTANCE);
-    this.hepPlanner.addRule(AggregateJoinTransposeRule.EXTENDED);
     this.hepPlanner.addRule(AggregateProjectMergeRule.INSTANCE);
     this.hepPlanner.addRule(AggregateProjectPullUpConstantsRule.INSTANCE);
-    //join rules    
-    /*A simple trick is to consider a window size equal to stream cardinality.
-     * For tuple-based windows, the window size is equal to the number of tuples.
-     * For time-based windows, the window size is equal to the (input_rate*time_of_window).*/
-    //this.hepPlanner.addRule(JoinToMultiJoinRule.INSTANCE); 
-    //this.hepPlanner.addRule(LoptOptimizeJoinRule.INSTANCE); 
-    //this.hepPlanner.addRule(MultiJoinOptimizeBushyRule.INSTANCE);
-    // simplify expressions rules
-    //this.hepPlanner.addRule(ReduceExpressionsRule.CALC_INSTANCE);
-    this.hepPlanner.addRule(ReduceExpressionsRule.FILTER_INSTANCE);
-    this.hepPlanner.addRule(ReduceExpressionsRule.PROJECT_INSTANCE);
-    // prune empty results rules   
-    this.hepPlanner.addRule(PruneEmptyRules.FILTER_INSTANCE);
-    this.hepPlanner.addRule(PruneEmptyRules.PROJECT_INSTANCE);
-    this.hepPlanner.addRule(PruneEmptyRules.AGGREGATE_INSTANCE);
-    this.hepPlanner.addRule(PruneEmptyRules.JOIN_LEFT_INSTANCE);    
-    this.hepPlanner.addRule(PruneEmptyRules.JOIN_RIGHT_INSTANCE);
-            
   }
 
-  private RelNode validateAndConvert(SqlNode sqlNode) throws ValidationException, RelConversionException {
-    SqlNode validated = validateNode(sqlNode);
-    RelNode relNode = convertToRelNode(validated);
-
-    // Drill does pre-processing too. We can do pre processing here if needed.
-    // Drill also preserve the validated type of the sql query for later use. But current Calcite
-    // API doesn't provide a way to get validated type.
-
-    return convertToSaberRel(relNode);
-  }
-
-  private RelNode convertToSaberRel(RelNode relNode) throws RelConversionException {
-    RelTraitSet traitSet = relNode.getTraitSet();
-    traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
-    return planner.transform(SABER_REL_CONVERSION_RULES, traitSet.plus(SaberLogicalConvention.INSTANCE), relNode);
-  }
-
-  public RelNode convertToRelNode(SqlNode sqlNode) throws RelConversionException {
-	  
-	final RelNode convertedNode = planner.convert(sqlNode);    
+  public RelNode hepOptimization(RelNode convertedNode) throws RelConversionException {	 	   
     
     final RelMetadataProvider provider = convertedNode.getCluster().getMetadataProvider();
 
@@ -262,15 +250,10 @@ public class SaberPlanner {
     hepPlanner.setRoot(convertedNode);
     RelNode rel = hepPlanner.findBestExp();
     
-
     // I think this line reset the metadata provider instances changed for hep planner execution.
     rel.accept(new MetaDataProviderModifier(provider));
    
     return rel;
-  }
-
-  private RelNode applyStreamRules(RelNode relNode) throws RelConversionException {
-    return planner.transform(STREAM_RULES, relNode.getTraitSet(), relNode);
   }
 
   private SqlNode validateNode(SqlNode sqlNode) throws ValidationException {
@@ -291,26 +274,26 @@ public class SaberPlanner {
       throw new RuntimeException("Query parsing error.", e);
     }
 
-    SqlNode validatedSqlNode = planner.validate(sqlNode);
-      
-    RelNode beforeplan= convertToRelNode(validatedSqlNode);   
-   
-    //use Volcano Planner to conver nodes
+    SqlNode validatedSqlNode = validateNode(sqlNode);
+    RelNode convertedNode = planner.convert(validatedSqlNode); 
+          
+    //use Volcano Planner to convert nodes
     //RelTraitSet traitSet = beforeplan.getTraitSet();
     //traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
     RelTraitSet traitSet = planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);	
-    //RelNode logicalPlan = planner.transform(0, traitSet, rel);
-    beforeplan = planner.transform(0, traitSet, beforeplan);       
+    RelNode volcanoPlan = planner.transform(0, traitSet, convertedNode);       
     
     //compute cost
-    final RelMetadataQuery mq = RelMetadataQuery.instance();
+    //final RelMetadataQuery mq = RelMetadataQuery.instance();
     //RelMetadataQuery.THREAD_PROVIDERS.set( JaninoRelMetadataProvider.of(new MyRelMetadataProvider()));
     /*RelOptCost relCost= mq.getCumulativeCost(beforeplan); //beforeplan.computeSelfCost( hepPlanner,mq);	 	   
     System.out.println("Plan cost is : " + relCost.toString());
 
     System.out.println("Row count : " + mq.getRowCount(beforeplan));*/
     System.out.println("Returning plan...");
-    return beforeplan;    
+    
+    RelNode finalPlan= hepOptimization(volcanoPlan);
+    return finalPlan;    
     //return planner.rel(validatedSqlNode).project();
   }  
   

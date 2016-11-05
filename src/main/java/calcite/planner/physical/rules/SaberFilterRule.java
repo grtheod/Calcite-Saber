@@ -5,12 +5,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.calcite.adapter.enumerable.EnumerableFilter;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.Pair;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 
+import calcite.planner.physical.PredicateUtil;
 import calcite.planner.physical.SaberRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
@@ -37,14 +43,8 @@ public class SaberFilterRule implements SaberRule {
 	
 	public static final String usage = "usage: Filter";
 	
-	public static final int      EQUAL_OP = 0;
-	public static final int   NONEQUAL_OP = 1;
-	public static final int       LESS_OP = 2;
-	public static final int    NONLESS_OP = 3;
-	public static final int    GREATER_OP = 4;
-	public static final int NONGREATER_OP = 5;
-	
-	String args;
+	RelNode rel;
+	WindowDefinition window;
 	int [] offsets;
 	ITupleSchema schema;
 	ITupleSchema outputSchema;
@@ -54,8 +54,8 @@ public class SaberFilterRule implements SaberRule {
 	int queryId = 0;
 	long timestampReference = 0;
 	
-	public SaberFilterRule(ITupleSchema schema, String args, int queryId , long timestampReference){
-		this.args = args;
+	public SaberFilterRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference){
+		this.rel = rel;
 		this.schema = schema;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
@@ -67,13 +67,17 @@ public class SaberFilterRule implements SaberRule {
 		WindowType windowType = WindowType.ROW_BASED;
 		int windowRange = 1;
 		int windowSlide = 1;
-		String operands = args;
-						
+		LogicalFilter filter = (LogicalFilter) rel;
+		RexNode condition = filter.getCondition();
+		
 		QueryConf queryConf = new QueryConf (batchSize);
 		
-		WindowDefinition window = new WindowDefinition (windowType, windowRange, windowSlide);
+		window = new WindowDefinition (windowType, windowRange, windowSlide);
 		
-		IPredicate predicate =  getFilterCondition(operands);
+		PredicateUtil predicateHelper = new PredicateUtil();
+		Pair<RexNode, IPredicate> pair = predicateHelper.getCondition(condition, 0);
+		IPredicate predicate = pair.right;
+		System.out.println("Filter Expr is : "+ predicate.toString());
 		
 		cpuCode = new Selection (predicate);
 		gpuCode = new SelectionKernel (schema, predicate, null, batchSize);
@@ -87,93 +91,7 @@ public class SaberFilterRule implements SaberRule {
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);		
 		outputSchema = schema;			
 	}
-
-	/*
-	 * Create filter conditions from a given String (only for integer Expressions).
-	 * */
-	public IPredicate getFilterCondition(String operands){
-		IPredicate predicate = null;		
-		operands =  operands.substring(operands.indexOf("=")+1); 
-		//op = op.replace("(", "").replace(")", "").replace("[$", "").replace("]", "").replace("]", "").trim();
-		if (!(operands.contains("AND")) && !(operands.contains("OR"))){
-			predicate = createSimpleExpression(operands);
-			System.out.println("Simple Expr : "+ predicate.toString());
-		} else {
-			predicate = createComplexExpression(operands);
-			System.out.println("Complex Expr : "+ predicate.toString());
-		}
-				
-		return predicate;
-	}
 	
-	/* Match a given comparison operator to Saber's operator codes*/
-	private int getComparisonOperator(String compOp) {
-		int operatorCode; 
-		switch (compOp){			
-			case "<>" :
-				operatorCode = NONEQUAL_OP; break;
-			case "<" :
-				operatorCode = LESS_OP; break;
-			case ">=" :
-				operatorCode = NONLESS_OP; break;
-			case ">" :
-				operatorCode = GREATER_OP; break;
-			case "<=" :
-				operatorCode = NONGREATER_OP; break;
-			default:
-				operatorCode = EQUAL_OP; //EQUAL_OP is considered default
-		}
-		return operatorCode;
-	}	
-	
-	/* A method to create a simple expression with one comparison operator */
-	public IPredicate createSimpleExpression(String operands){
-		String compOp = operands.substring(0, operands.indexOf("(")).replace("[", "");
-		int comparisonOperator = getComparisonOperator(compOp);
-		String [] ops = operands.substring(operands.indexOf("(")+1).replace(")","").replace("]", "").split(",");		
-		IntExpression firstOp,secondOp;
-		
-		if(ops[0].contains("$")){
-			firstOp = new IntColumnReference(Integer.parseInt(ops[0].replace("$", "").trim()) + 1);
-		}else {
-			firstOp = new IntConstant(Integer.parseInt(ops[0].trim()));
-		}
-		if(ops[1].contains("$")){
-			secondOp = new IntColumnReference(Integer.parseInt(ops[1].replace("$", "").trim()) + 1);
-		}else {
-			secondOp = new IntConstant(Integer.parseInt(ops[1].trim()));
-		}
-		
-		return new IntComparisonPredicate(comparisonOperator, firstOp, secondOp);			
-	}
-	
-	/* A method to create a complex expression that contains only ANDs/ORs*/
-	public IPredicate createComplexExpression(String operands){
-		boolean isAnd = true;
-		if (operands.contains("OR")) {
-			isAnd = false;
-		}
-		
-		operands = operands.replace("OR", "").replace("AND", "").replace("[", "").replace("]", "");
-		System.out.println(operands);
-		Iterable<String> ops = Splitter.on("),").split(operands);
-		int comparisons = Iterables.size(ops);
-		IPredicate [] predicates = new IPredicate [comparisons];
-		int i = 0;
-		for ( String op : ops) {
-			op = op.substring(1);
-			System.out.println(op);
-			predicates[i] = createSimpleExpression(op);
-			i++;
-		}
-		
-		if (isAnd) {
-			return new ANDPredicate (predicates);
-		}else {
-			return new ORPredicate (predicates);
-		}
-	}
-
 	public ITupleSchema getOutputSchema() {
 		return this.outputSchema;
 	}
@@ -188,6 +106,14 @@ public class SaberFilterRule implements SaberRule {
 	
 	public IOperatorCode getGpuCode(){
 		return this.gpuCode;
+	}
+
+	public WindowDefinition getWindow() {
+		return window;
+	}
+
+	public WindowDefinition getWindow2() {
+		return null;
 	}
 	
 }

@@ -141,6 +141,9 @@ public class SaberCostBase implements SaberRelOptCost {
 	@Override
 	public boolean isLt(RelOptCost other) {
 	    SaberCostBase that = (SaberCostBase) other;
+	    if (true)
+	    	return this.rowCount < that.rowCount;
+	    
 	    return ((this.cpu + this.io + this.network)
 	    	< (that.cpu + that.io + that.network)); //change the way they are compared
 	}

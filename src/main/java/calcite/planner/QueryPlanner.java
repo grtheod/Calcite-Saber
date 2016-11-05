@@ -3,6 +3,8 @@ package calcite.planner;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
@@ -67,7 +69,6 @@ import org.apache.calcite.tools.ValidationException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-import calcite.planner.logical.JoinToSaberJoinRule;
 import calcite.planner.physical.SaberLogicalConvention;
 
 /**
@@ -88,6 +89,15 @@ public class QueryPlanner {
     traitDefs.add(ConventionTraitDef.INSTANCE);
     traitDefs.add(RelCollationTraitDef.INSTANCE);
 
+    Program program =Programs.ofRules(
+    	    /*Enumerable Rules*/
+    		EnumerableRules.ENUMERABLE_FILTER_RULE,
+    		EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
+    		EnumerableRules.ENUMERABLE_PROJECT_RULE,
+    		EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
+    		EnumerableRules.ENUMERABLE_JOIN_RULE,
+    		EnumerableRules.ENUMERABLE_WINDOW_RULE
+    		);
     FrameworkConfig config = Frameworks.newConfigBuilder()
         .parserConfig(SqlParser.configBuilder()
             .setLex(Lex.MYSQL)
@@ -99,6 +109,7 @@ public class QueryPlanner {
         .ruleSets(SaberRuleSets.getRuleSets())
         .costFactory(null) //If null, use the default cost factory for that planner.
         .typeSystem(SaberRelDataTypeSystem.SABER_REL_DATATYPE_SYSTEM)
+        .programs(program)
         .build();
     this.planner = Frameworks.getPlanner(config);
 
@@ -130,7 +141,6 @@ public class QueryPlanner {
     hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
     hepProgramBuilder.addRuleClass(JoinPushExpressionsRule.class);
     
-    hepProgramBuilder.addRuleClass(JoinToSaberJoinRule.class);
 
     //hepProgramBuilder.addMatchOrder(HepMatchOrder.ARBITRARY);
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
@@ -247,7 +257,9 @@ public class QueryPlanner {
 
     // I think this line reset the metadata provider instances changed for hep planner execution.
     rel.accept(new MetaDataProviderModifier(provider));
-   
+    
+    RelTraitSet traitSet = planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);	
+    rel = planner.transform(0, traitSet, rel);
     return rel;
   }
 

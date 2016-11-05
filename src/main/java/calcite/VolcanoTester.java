@@ -84,12 +84,8 @@ import calcite.planner.QueryPlanner;
 import calcite.planner.SaberRelDataTypeSystem;
 import calcite.planner.SaberRuleSets;
 import calcite.planner.QueryPlanner.MetaDataProviderModifier;
-import calcite.planner.logical.JoinToSaberJoinRule;
-import calcite.planner.logical.SaberProjectJoinTransposeRule;
-import calcite.planner.logical.SaberProjectJoinTransposeRule2;
 import calcite.planner.physical.PhysicalRuleConverter;
 import calcite.planner.physical.SystemConfig;
-import calcite.planner.physical.VolcanoPhysicalRuleConverter;
 import calcite.utils.CustomersTableFactory;
 import calcite.utils.DataGenerator;
 import calcite.utils.OrdersTableFactory;
@@ -126,11 +122,8 @@ public class VolcanoTester {
 	    RelNode logicalPlan = planner.transform(0, traitSet, rel);
 	    
 	    HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
-	    hepProgramBuilder.addRuleClass(SaberProjectJoinTransposeRule.class);
-	    hepProgramBuilder.addRuleClass(SaberProjectJoinTransposeRule2.class);
 	    HepPlanner hepPlanner = new HepPlanner(hepProgramBuilder.build());	   
-	    hepPlanner.addRule(SaberProjectJoinTransposeRule.INSTANCE);
-	    hepPlanner.addRule(SaberProjectJoinTransposeRule2.INSTANCE);
+
 	    
 	    final RelMetadataProvider provider = logicalPlan.getCluster().getMetadataProvider();
 
@@ -170,7 +163,7 @@ public class VolcanoTester {
 				.build();			
 	
 		long timestampReference = System.nanoTime();
-		VolcanoPhysicalRuleConverter physicalPlan = new VolcanoPhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
+		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		physicalPlan.convert (logicalPlan);
 		
 	}

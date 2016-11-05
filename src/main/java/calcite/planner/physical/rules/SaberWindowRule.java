@@ -1,53 +1,32 @@
 package calcite.planner.physical.rules;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.calcite.adapter.enumerable.EnumerableAggregate;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.logical.LogicalAggregate;
-import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.rel.logical.LogicalWindow;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.util.Pair;
 
 import calcite.planner.physical.AggregationUtil;
 import calcite.planner.physical.SaberRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
-import uk.ac.imperial.lsds.saber.QueryApplication;
 import uk.ac.imperial.lsds.saber.QueryConf;
 import uk.ac.imperial.lsds.saber.QueryOperator;
-import uk.ac.imperial.lsds.saber.SystemConf;
-import uk.ac.imperial.lsds.saber.TupleSchema;
-import uk.ac.imperial.lsds.saber.Utils;
 import uk.ac.imperial.lsds.saber.WindowDefinition;
-import uk.ac.imperial.lsds.saber.TupleSchema.PrimitiveType;
 import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
-import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatConstant;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatDivision;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatExpression;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatMultiplication;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntExpression;
-import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongExpression;
 import uk.ac.imperial.lsds.saber.cql.operators.AggregationType;
-import uk.ac.imperial.lsds.saber.cql.operators.IAggregateOperator;
 import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
 import uk.ac.imperial.lsds.saber.cql.operators.cpu.Aggregation;
-import uk.ac.imperial.lsds.saber.cql.operators.cpu.Projection;
 import uk.ac.imperial.lsds.saber.cql.operators.gpu.AggregationKernel;
-import uk.ac.imperial.lsds.saber.cql.operators.gpu.ProjectionKernel;
 import uk.ac.imperial.lsds.saber.cql.operators.gpu.ReductionKernel;
 
-public class SaberAggregateRule implements SaberRule{
-	public static final String usage = "usage: Aggregate";
+public class SaberWindowRule implements SaberRule{
+	public static final String usage = "usage: Window";
 
 	RelNode rel;
 	WindowDefinition window;
@@ -60,8 +39,7 @@ public class SaberAggregateRule implements SaberRule{
 	int queryId = 0;
 	long timestampReference = 0;
 	
-	
-	public SaberAggregateRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference){
+	public SaberWindowRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference){
 		this.rel = rel;
 		this.schema = schema;
 		this.queryId = queryId;
@@ -71,25 +49,26 @@ public class SaberAggregateRule implements SaberRule{
 	public void prepareRule() {
 	
 		int batchSize = 1048576;
-		WindowType windowType = WindowType.ROW_BASED;
-		int windowRange = 1024;
-		int windowSlide = 1024;
-		LogicalAggregate aggregate = (LogicalAggregate) rel;
+		int windowSlide = 1; //We can't define the slide with the OVER function.
+		/*At this moment, a window has only one group of aggregate functions.*/
+		LogicalWindow windowAgg = (LogicalWindow) rel;		
+		WindowType windowType = (windowAgg.groups.get(0).isRows) ? WindowType.ROW_BASED : WindowType.RANGE_BASED;
+		int windowRange = createWindowFrame(windowAgg.getConstants());		
 		
 		QueryConf queryConf = new QueryConf (batchSize);
 		
 		window = new WindowDefinition (windowType, windowRange, windowSlide);		
 		
 		AggregationUtil aggrHelper = new AggregationUtil();
-		Pair<AggregationType [],FloatColumnReference []>  aggr = aggrHelper.getAggregationTypesAndAttributes(aggregate.getAggCallList());
+		Pair<AggregationType [],FloatColumnReference []>  aggr = aggrHelper.getAggregationTypesAndAttributes(windowAgg.groups.get(0).getAggregateCalls(windowAgg));
 		AggregationType [] aggregationTypes = aggr.left;
 		FloatColumnReference [] aggregationAttributes = aggr.right;
 		
-		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(aggregate.getGroupSet());
+		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(windowAgg.groups.get(0).keys);
 		
 		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, groupByAttributes);
 		System.out.println(cpuCode);
-		if (groupByAttributes == null)
+		if (groupByAttributes == null) 
 			gpuCode = new ReductionKernel (window, aggregationTypes, aggregationAttributes, schema, batchSize);
 		else
 			gpuCode = new AggregationKernel (window, aggregationTypes, aggregationAttributes, groupByAttributes, schema, batchSize);
@@ -103,6 +82,13 @@ public class SaberAggregateRule implements SaberRule{
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
 
 		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, groupByAttributes, schema);	
+	}
+
+	private int createWindowFrame(List<RexLiteral> constants) {
+		int windowFrame = 0;
+		for ( RexLiteral con : constants) 
+			windowFrame += Integer.parseInt(con.toString());
+		return windowFrame;
 	}
 
 	public ITupleSchema getOutputSchema(){

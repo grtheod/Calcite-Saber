@@ -4,9 +4,11 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 
+import org.apache.calcite.adapter.enumerable.EnumerableAggregate;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -44,8 +46,8 @@ public class Tester {
 						.build();
 		
 		Statement statement = connection.createStatement();
-		
-		QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
+		/*SaberPlanner is a combination of both Volcano and heuristic planner.*/
+		SaberPlanner queryPlanner = new SaberPlanner(rootSchema);
 		
 		/* Until it is fixed, when joining two tables and then using group by, the attributes of group by predicate should be 
 		 * from the first table. For example:
@@ -56,16 +58,23 @@ public class Tester {
 		 * GROUP BY table1.attrx, ... 
 		 * ... 
 		 * */
-		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/
+		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/		
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
-		        "select s.products.productid "
-		        + "from s.customers,s.orders,s.products "
-		        + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
-		        + "and units>5 "
-		        );
+		        "select s.orders.productid / 5  "
+		                + "from  s.orders "// s.customers,s.products  "
+		                //+ "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
+		                //+ " and units>5 "
+		               
+				//+ "group by productid"
+				//+ "window pr as (PARTITION BY productid ROWS BETWEEN 8 PRECEDING AND 10 FOLLOWING)"					
+				);
 				
-		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
 		
+		/*logicalPlan = logicalPlan.getInput(0);
+		EnumerableAggregate ea = (EnumerableAggregate) logicalPlan; 
+		System.out.println (ea.getGroupSet().toList().size());
+		*/
 		/*Set System Configuration.*/
 		SystemConf sconf = new SystemConfig()
 				.setCircularBufferSize(32 * 1048576)

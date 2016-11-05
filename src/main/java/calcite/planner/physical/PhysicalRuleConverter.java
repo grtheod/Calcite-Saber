@@ -77,7 +77,7 @@ public class PhysicalRuleConverter {
 		
 		List<RelNode> children = chainTail.getInputs();
 		if (children.size() == 0){	
-			
+			//fix simple table scan
 			System.out.println();
 			System.out.println(chainTail.getRelTypeName());
 			System.out.println(chainTail.getTable().getQualifiedName());
@@ -98,34 +98,12 @@ public class PhysicalRuleConverter {
 			
 			System.out.println("-------------------------------------------");
 			//System.out.println(logicalPlan.getRelTypeName());
-			String args = "";
-			/* Take advantage of getChildExps() RexNodes and not use simple Strings.*/
-			if (logicalPlan.getRelTypeName().equals("LogicalProject")) {
-				args = logicalPlan.getChildExps().toString();
-				//System.out.println(args);
-			} else 
-			if (logicalPlan.getRelTypeName().equals("LogicalFilter")) {
-				args = logicalPlan.getChildExps().toString();
-				//System.out.println(args);
-			} else
-			if (logicalPlan.getRelTypeName().equals("LogicalAggregate")) {
-				args = logicalPlan.getDescription().replace("input="+logicalPlan.getInput(0).toString()+",", "");
-				args = args.substring(args.indexOf("("));
-				//System.out.println(args);				
-			} else
-			if (logicalPlan.getRelTypeName().equals("LogicalWindow")) {
-				System.err.println("LogicalWindow is not supported yet.");
-				System.exit(1);
-			} else {
-				System.err.println("Not supported operator.");
-				System.exit(1);
-			}
 			
 			ChainOfRules chain = chains.get(node.left);
-			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, chain.getOutputSchema(), queryId, timestampReference);
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference);
 			SaberRule rule = operation.construct();
 		    
-			if (logicalPlan.getRelTypeName().equals("LogicalAggregate")) {
+			if ((logicalPlan.getRelTypeName().equals("LogicalAggregate")) || (logicalPlan.getRelTypeName().equals("LogicalWindow"))) {
 				aggregates.add(rule);
 			}
 		    
@@ -138,7 +116,7 @@ public class PhysicalRuleConverter {
 			} else {
 				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,true));
 			}
-			queries.add(query);		    		    		   		    
+			queries.add(query); 		    		    		   		    
 			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
 			
 			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
@@ -152,6 +130,7 @@ public class PhysicalRuleConverter {
 			Pair <Integer, String> leftNode = convert(chainTail);			
 			ChainOfRules leftChain = chains.get(leftNode.left);
 			
+			System.out.println("-------------------------------------------");
 			/*Build right side of join*/
 			chainTail = children.get(1);
 			System.out.println(chainTail);
@@ -159,7 +138,7 @@ public class PhysicalRuleConverter {
 			ChainOfRules rightChain = chains.get(rightNode.left);
 			
 			String args = logicalPlan.getChildExps().toString();
-			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), args, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference);
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference);
 			SaberRule rule = operation.construct();
 			Query query = rule.getQuery();
 			System.out.println("Current query id : "+ query.getId());

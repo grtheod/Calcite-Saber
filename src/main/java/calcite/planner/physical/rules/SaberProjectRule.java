@@ -1,32 +1,24 @@
 package calcite.planner.physical.rules;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.calcite.util.Pair;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexNode;
 
 import calcite.planner.physical.SaberRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
-import uk.ac.imperial.lsds.saber.QueryApplication;
 import uk.ac.imperial.lsds.saber.QueryConf;
 import uk.ac.imperial.lsds.saber.QueryOperator;
-import uk.ac.imperial.lsds.saber.SystemConf;
-import uk.ac.imperial.lsds.saber.TupleSchema;
-import uk.ac.imperial.lsds.saber.Utils;
 import uk.ac.imperial.lsds.saber.WindowDefinition;
 import uk.ac.imperial.lsds.saber.TupleSchema.PrimitiveType;
 import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
 import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatConstant;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatDivision;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatExpression;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatMultiplication;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
 import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
 import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
@@ -35,7 +27,9 @@ import uk.ac.imperial.lsds.saber.cql.operators.gpu.ProjectionKernel;
 /*Wrong result after join*/
 public class SaberProjectRule implements SaberRule {
 	public static final String usage = "usage: Projection";
-	String args;
+	
+	RelNode rel;
+	WindowDefinition window;
 	int [] offsets;
 	ITupleSchema schema;
 	ITupleSchema outputSchema;
@@ -45,9 +39,9 @@ public class SaberProjectRule implements SaberRule {
 	int queryId = 0;
 	long timestampReference = 0;
 	
-	public SaberProjectRule(ITupleSchema schema, String args, int queryId , long timestampReference){
-		this.schema=schema;
-		this.args=args;
+	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference){
+		this.schema = schema;
+		this.rel = rel;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
 	}
@@ -58,39 +52,51 @@ public class SaberProjectRule implements SaberRule {
 		WindowType windowType = WindowType.ROW_BASED;
 		int windowRange = 1;
 		int windowSlide = 1;
-		String operands = args;
 		int projectedAttributes = 0;
 		int expressionDepth = 1;
 				
 		QueryConf queryConf = new QueryConf (batchSize);
 		
-		WindowDefinition window = new WindowDefinition (windowType, windowRange, windowSlide);
-				
-		List <String> projectedColumns = getProjectedColumns(operands);
-		projectedAttributes = projectedColumns.size();
+		window = new WindowDefinition (windowType, windowRange, windowSlide);
+		
+		List<RexNode> projectedAttrs = rel.getChildExps(); 
+		
+		projectedAttributes = projectedAttrs.size();
 		
 		Expression [] expressions = new Expression [projectedAttributes + 1];
 		/* Always project the timestamp */
 		expressions[0] = new LongColumnReference(0);
 			
 		int column;
-		for (int i = 0; i < projectedAttributes; ++i){
-			column = Integer.parseInt(projectedColumns.get(i));
-			if (schema.getAttributeType(column + 1).equals(PrimitiveType.INT))
-				expressions[i + 1] = new IntColumnReference (column + 1);
-			else if (schema.getAttributeType(column + 1).equals(PrimitiveType.FLOAT)) 
-				expressions[i + 1] = new FloatColumnReference (column + 1);
+		int i = 1;
+		/*Fix the expressions.*/
+		for (RexNode attr : projectedAttrs){
+			if (attr.getKind().toString().equals("CASE")) //fix the case expression
+				column =  Integer.parseInt(((RexCall)((RexCall) attr).operands.get(1)).getOperands().get(0).toString().replace("$", ""));
+			else 
+				column = Integer.parseInt(attr.toString().replace("$", "")) + 1;
+			
+			if (schema.getAttributeType(column).equals(PrimitiveType.INT))
+				expressions[i] = new IntColumnReference (column);
+			else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
+				expressions[i] = new FloatColumnReference (column);
 			else
-				expressions[i + 1] = new LongColumnReference (column + 1);
+				expressions[i] = new LongColumnReference (column);
+			i++;
 		}
-		
+
 		/*Creating output Schema*/
 		outputSchema = ExpressionsUtil.getTupleSchemaFromExpressions(expressions);
-		for (int i = 0; i < projectedAttributes; ++i){		
-			column = Integer.parseInt(projectedColumns.get(i));
-			outputSchema.setAttributeName(i+1, schema.getAttributeName(column + 1));
+		i = 1;
+		for (RexNode attr : projectedAttrs){
+			if (attr.getKind().toString().equals("CASE"))
+				column =  Integer.parseInt(((RexCall)((RexCall) attr).operands.get(1)).getOperands().get(0).toString().replace("$", ""));
+			else 
+				column = Integer.parseInt(attr.toString().replace("$", "")) + 1;
+			outputSchema.setAttributeName(i, schema.getAttributeName(column));
+			i++;
 		}
-				
+		
 		IOperatorCode cpuCode = new Projection (expressions);
 		IOperatorCode gpuCode = new ProjectionKernel (schema, expressions, batchSize, expressionDepth);
 		
@@ -102,18 +108,7 @@ public class SaberProjectRule implements SaberRule {
 			
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
 	}
-	
-	/* A method to get the columns that we will project (without expressions)*/
-	public List <String> getProjectedColumns(String operands){
-		List <String> prColumns = new ArrayList<String>();		
-		String [] operand = operands.split(","); 
-		for( String op : operand){
-			op = op.replace("[", "").replace("]", "").replace("$", "").trim();			
-			prColumns.add(op);
-		}				
-		return prColumns;
-	}
-	
+		
 	public ITupleSchema getOutputSchema(){
 		return this.outputSchema;
 	}
@@ -128,6 +123,14 @@ public class SaberProjectRule implements SaberRule {
 	
 	public IOperatorCode getGpuCode(){
 		return this.gpuCode;
+	}
+
+	public WindowDefinition getWindow() {
+		return window;
+	}
+
+	public WindowDefinition getWindow2() {
+		return null;
 	}
 	
 }
