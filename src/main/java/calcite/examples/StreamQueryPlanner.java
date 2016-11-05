@@ -88,7 +88,12 @@ public class StreamQueryPlanner {
 	    Statement statement = connection.createStatement();
 	    //ResultSet resultSet = statement.executeQuery("select *\n" + "from \"os\".\"orders\"");
 	    QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
-	    RelNode loginalPlan = queryPlanner.getLogicalPlan("select os.orders.productid, description, sum(units)*0.3 from os.orders, ps.products where os.orders.productid=ps.products.productid group by os.orders.productid,description having sum(units) > 5  order by sum(units) ");
+	    RelNode loginalPlan = queryPlanner.getLogicalPlan(""
+	    		+ "select os.orders.productid, description, sum(units)*0.3 "
+	    		+ "from os.orders, ps.products "
+	    		+ "where os.orders.productid=ps.products.productid "
+	    		+ "group by os.orders.productid,description "
+	    		+ "having sum(units) > 5  order by sum(units) ");
 	    System.out.println(RelOptUtil.toString(loginalPlan));	    
 	}
 

@@ -91,8 +91,6 @@ public class PredicateUtil {
 	    } else {    	
 	    	return new Pair<RexNode,IPredicate>(condition,null);
 	    }	
-	}
-	
-	
+	}		
 
 }

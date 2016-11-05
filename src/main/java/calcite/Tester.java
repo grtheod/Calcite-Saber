@@ -8,6 +8,7 @@ import org.apache.calcite.adapter.enumerable.EnumerableAggregate;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
@@ -60,21 +61,22 @@ public class Tester {
 		 * */
 		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/		
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
-		        "select s.orders.productid / 5  "
+		        "select avg(s.orders.productid) "
 		                + "from  s.orders "// s.customers,s.products  "
 		                //+ "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
 		                //+ " and units>5 "
 		               
-				//+ "group by productid"
+				//+ "group by productid "
 				//+ "window pr as (PARTITION BY productid ROWS BETWEEN 8 PRECEDING AND 10 FOLLOWING)"					
 				);
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
 		
-		/*logicalPlan = logicalPlan.getInput(0);
-		EnumerableAggregate ea = (EnumerableAggregate) logicalPlan; 
-		System.out.println (ea.getGroupSet().toList().size());
-		*/
+		//logicalPlan = logicalPlan.getInput(0);
+		//LogicalProject ea = (LogicalProject) logicalPlan; 
+		//System.out.println (((RexCall)ea.getChildExps().get(0)).getOperator().toString());
+
+		
 		/*Set System Configuration.*/
 		SystemConf sconf = new SystemConfig()
 				.setCircularBufferSize(32 * 1048576)

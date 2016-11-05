@@ -8,6 +8,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 
+import calcite.planner.physical.ExpressionBuilder;
 import calcite.planner.physical.SaberRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
@@ -20,6 +21,7 @@ import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
 import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatColumnReference;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
+import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntConstant;
 import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
 import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
 import uk.ac.imperial.lsds.saber.cql.operators.cpu.Projection;
@@ -69,19 +71,20 @@ public class SaberProjectRule implements SaberRule {
 			
 		int column;
 		int i = 1;
-		/*Fix the expressions.*/
+		/*Fix the offset of schema references.*/
 		for (RexNode attr : projectedAttrs){
-			if (attr.getKind().toString().equals("CASE")) //fix the case expression
-				column =  Integer.parseInt(((RexCall)((RexCall) attr).operands.get(1)).getOperands().get(0).toString().replace("$", ""));
-			else 
-				column = Integer.parseInt(attr.toString().replace("$", "")) + 1;
-			
-			if (schema.getAttributeType(column).equals(PrimitiveType.INT))
-				expressions[i] = new IntColumnReference (column);
-			else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
-				expressions[i] = new FloatColumnReference (column);
-			else
-				expressions[i] = new LongColumnReference (column);
+			if (attr.getKind().toString().equals("INPUT_REF")) {				
+				column = Integer.parseInt(attr.toString().replace("$", "")) + 1;				
+				if (schema.getAttributeType(column).equals(PrimitiveType.INT))
+					expressions[i] = new IntColumnReference (column);
+				else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
+					expressions[i] = new FloatColumnReference (column);
+				else
+					expressions[i] = new LongColumnReference (column);
+			} else {
+				expressions[i] = new ExpressionBuilder(attr).build();
+			}
+			//column =  Integer.parseInt(((RexCall)((RexCall) attr).operands.get(1)).getOperands().get(0).toString().replace("$", ""));
 			i++;
 		}
 
@@ -89,11 +92,12 @@ public class SaberProjectRule implements SaberRule {
 		outputSchema = ExpressionsUtil.getTupleSchemaFromExpressions(expressions);
 		i = 1;
 		for (RexNode attr : projectedAttrs){
-			if (attr.getKind().toString().equals("CASE"))
-				column =  Integer.parseInt(((RexCall)((RexCall) attr).operands.get(1)).getOperands().get(0).toString().replace("$", ""));
-			else 
+			if (attr.getKind().toString().equals("INPUT_REF")) {
 				column = Integer.parseInt(attr.toString().replace("$", "")) + 1;
-			outputSchema.setAttributeName(i, schema.getAttributeName(column));
+				outputSchema.setAttributeName(i, schema.getAttributeName(column));
+			} else {
+				outputSchema.setAttributeName(i, attr.toString());
+			}			
 			i++;
 		}
 		

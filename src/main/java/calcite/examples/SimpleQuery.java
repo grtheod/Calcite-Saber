@@ -2,7 +2,13 @@ package calcite.examples;
 
 import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.tools.RelConversionException;
+import org.apache.calcite.tools.ValidationException;
+
+import calcite.planner.QueryPlanner;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -21,7 +27,7 @@ public class SimpleQuery {
     new SimpleQuery().run();
   }
 
-  public void run() throws ClassNotFoundException, SQLException {
+  public void run() throws ClassNotFoundException, SQLException, ValidationException, RelConversionException {
     Class.forName("org.apache.calcite.jdbc.Driver");
 	Properties info = new Properties();
 	info.setProperty("lex", "JAVA");
@@ -48,6 +54,17 @@ public class SimpleQuery {
     resultSet.close();
     statement.close();
     connection.close();
+    /*
+    QueryPlanner queryPlanner = new QueryPlanner(calciteConnection.getRootSchema());
+    RelNode loginalPlan = queryPlanner.getLogicalPlan(
+    		"select stream min(units) "
+    		+ "from SS.DEPTS "
+    		+ "where SS.DEPTS.NAME = 'Sales' "
+    		+ "group by SS.DEPTS.DEPTNO"
+    		);
+    		
+    System.out.println(RelOptUtil.toString(loginalPlan));
+    */
   }
 
 }
