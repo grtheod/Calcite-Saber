@@ -45,10 +45,12 @@ public class SaberJoinRule implements SaberRule{
 	int queryId = 0;
 	long timestampReference = 0;
 	
-	public SaberJoinRule(ITupleSchema schema1, ITupleSchema schema2, RelNode rel, int queryId, long timestampReference){
+	public SaberJoinRule(ITupleSchema schema1, ITupleSchema schema2, RelNode rel, int queryId, long timestampReference, WindowDefinition window1, WindowDefinition window2){
 		this.rel = rel;
 		this.schema1 = schema1;
 		this.schema2 = schema2;
+		this.window1 = window1;
+		this.window2 = window2;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
 	}
@@ -56,23 +58,26 @@ public class SaberJoinRule implements SaberRule{
 	public void prepareRule() {
 
 		int batchSize = 1048576;
-		WindowType windowType1 = WindowType.ROW_BASED;
-		int windowRange1 = 1024;
-		int windowSlide1 = 1024;
-		WindowType windowType2 = WindowType.ROW_BASED;
-		int windowRange2 = 1024;
-		int windowSlide2 = 1024;		
+		if (window1 == null) {
+			WindowType windowType1 = WindowType.ROW_BASED;
+			int windowRange1 = 1024;
+			int windowSlide1 = 1024;
+			window1 = new WindowDefinition (windowType1, windowRange1, windowSlide1);
+			
+		}
+		if (window2 == null) {
+			WindowType windowType2 = WindowType.ROW_BASED;
+			int windowRange2 = 1024;
+			int windowSlide2 = 1024;
+			window2 = new WindowDefinition (windowType2, windowRange2, windowSlide2);
+		}
 		LogicalJoin join = (LogicalJoin) rel;
 		RexNode condition = join.getCondition();
 		
-		QueryConf queryConf = new QueryConf (batchSize);
-		
-		window1 = new WindowDefinition (windowType1, windowRange1, windowSlide1);
-				
-		window2 = new WindowDefinition (windowType2, windowRange2, windowSlide2);
+		QueryConf queryConf = new QueryConf (batchSize);										
 				
 		PredicateUtil predicateHelper = new PredicateUtil();
-		int joinOffset = schema1.numberOfAttributes() - 1; //use the joinOffset to fix the join condition.
+		int joinOffset =  schema1.numberOfAttributes(); //use the joinOffset to fix the join condition.
 		Pair<RexNode, IPredicate> pair = predicateHelper.getCondition(condition,joinOffset);
 		IPredicate predicate = pair.right;
 		System.out.println("Join Expr is : "+ predicate.toString());
@@ -115,7 +120,7 @@ public class SaberJoinRule implements SaberRule{
 	}
 
 	public WindowDefinition getWindow() {
-		return window1;
+		return window1; //return different value
 	}
 
 	public WindowDefinition getWindow2() {

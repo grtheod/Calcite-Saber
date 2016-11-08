@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.calcite.DataContext;
+import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
@@ -11,6 +12,7 @@ import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
@@ -40,13 +42,13 @@ public class CustomersTableFactory implements TableFactory<Table>  {
  */
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
-		    {1, 1012},
-		    {2, 5334},
-		    {3, 2222},
-		    {4, 3232},
-		    {5, 3121},
-		    {6, 13232},
-		    {7, 15123},
+		    {ts(10,15,0), 1, 1012},
+		    {ts(10,15,0), 2, 5334},
+		    {ts(10,15,0), 3, 2222},
+		    {ts(10,15,0), 4, 3232},
+		    {ts(10,15,0), 5, 3121},
+		    {ts(10,15,0), 6, 13232},
+		    {ts(10,15,0), 7, 15123},
 		};
 		return new CustomersTable(ImmutableList.copyOf(rows));
 	}
@@ -55,6 +57,7 @@ public class CustomersTableFactory implements TableFactory<Table>  {
 		protected final RelProtoDataType protoRowType = new RelProtoDataType() {
 			public RelDataType apply(RelDataTypeFactory a0) {
 		        return a0.builder()
+		        	.add("rowtime", SqlTypeName.TIMESTAMP)
 		            .add("customerid", SqlTypeName.INTEGER)
 		            .add("phone", SqlTypeName.BIGINT)
 		            .build();
@@ -77,13 +80,17 @@ public class CustomersTableFactory implements TableFactory<Table>  {
 
 		public Statistic getStatistic() {
 			int rowCount = rows.size();
-			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of()); //add List<ImmutableBitSet>
+			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of(), 
+					RelCollations.createSingleton(0)); //add List<ImmutableBitSet>
 		}
 
 		public Schema.TableType getJdbcTableType() {
 		    return Schema.TableType.TABLE;
-		}	
-		
+		}			
 	}
+	
+    private static Object ts(int h, int m, int s) {
+        return DateTimeUtils.unixTimestamp(2016, 10, 8, h, m, s);
+    }
 }
 

@@ -5,26 +5,30 @@ import java.util.List;
 
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
+import uk.ac.imperial.lsds.saber.WindowDefinition;
 
 public class ChainOfRules {
 	Query query;
 	ITupleSchema outputSchema;
+	WindowDefinition window;
 	byte [] data1, data2;
 	boolean isFirst;
 	boolean isJoin;
 	boolean hasMore;
 
-	ChainOfRules(Query query, ITupleSchema outputSchema, byte [] data , boolean isJoin, boolean isFirst) {
+	ChainOfRules(Query query, ITupleSchema outputSchema, WindowDefinition window, byte [] data, boolean isJoin, boolean isFirst) {
 		this.query = query;
 		this.outputSchema = outputSchema;
 		this.data1 = data;
+		this.window = window;
 		this.isFirst = isFirst;
 		this.isJoin = isJoin;
 	}
 	
-	ChainOfRules(Query query, ITupleSchema outputSchema, byte [] data1 , byte [] data2, boolean isJoin,boolean isFirst, boolean hasMore) {
+	ChainOfRules(Query query, ITupleSchema outputSchema, WindowDefinition window, byte [] data1 , byte [] data2, boolean isJoin,boolean isFirst, boolean hasMore) {
 		this.query = query;
 		this.outputSchema = outputSchema;
+		this.window = window;
 		this.data1 = data1;
 		this.data2 = data2;
 		this.isFirst = isFirst;
@@ -32,9 +36,10 @@ public class ChainOfRules {
 		this.hasMore = hasMore;
 	}
 	
-	public void addRule(Query query, ITupleSchema outputSchema) {
+	public void addRule(Query query, ITupleSchema outputSchema, WindowDefinition window) {
 		this.query = query;
 		this.outputSchema = outputSchema;
+		this.window = window;
 	}
 		
 	public ITupleSchema getOutputSchema() {
@@ -65,4 +70,7 @@ public class ChainOfRules {
 		return this.hasMore;
 	}
 	
+	public WindowDefinition getWindow(){
+		return this.window;
+	}
 }

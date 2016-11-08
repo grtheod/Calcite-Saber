@@ -18,13 +18,13 @@ public class EnumerableWindowToLogicalWindowRule extends RelOptRule {
 	  @Override
 	  public void onMatch(RelOptRuleCall call) {
 	    final EnumerableWindow window = call.rel(0);
-	    final RelNode input = call.rel(1);
+	    //final RelNode input = call.rel(1);
 	    final RelTraitSet traits = window.getTraitSet();
 	    call.transformTo(
 	        new LogicalWindow(
 	            window.getCluster(),
 	            traits,
-	            input,
+	            window.getInput(),
 	            window.constants,
 	            window.getRowType(),
 	            window.groups));

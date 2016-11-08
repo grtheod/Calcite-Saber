@@ -77,12 +77,12 @@ public class PredicateUtil {
 	    		IntExpression firstOp,secondOp;
 	    		
 	    		if(rex.getOperands().get(0).toString().contains("$")){
-	    			firstOp = new IntColumnReference(Integer.parseInt(rex.getOperands().get(0).toString().replace("$", "").trim()) + 1);
+	    			firstOp = new IntColumnReference(Integer.parseInt(rex.getOperands().get(0).toString().replace("$", "").trim()));
 	    		}else {
 	    			firstOp = new IntConstant(Integer.parseInt(rex.getOperands().get(0).toString().trim()));
 	    		}
 	    		if(rex.getOperands().get(1).toString().contains("$")){ //using joinOffset to fix the second operand in the case of join
-	    			secondOp = new IntColumnReference(Integer.parseInt(rex.getOperands().get(1).toString().replace("$", "").trim()) + 1 - joinOffset);
+	    			secondOp = new IntColumnReference(Integer.parseInt(rex.getOperands().get(1).toString().replace("$", "").trim()) - joinOffset);
 	    		}else {
 	    			secondOp = new IntConstant(Integer.parseInt(rex.getOperands().get(1).toString().trim()));
 	    		}	    		

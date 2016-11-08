@@ -17,32 +17,32 @@ public class SaberSchema {
 	/* Create a schema in Saber from a given list of Calcite's DataTypes.*/
 	public ITupleSchema createTable(List<RelDataTypeField> fields ){
 		int numberOfAttributes = fields.size();
-		int [] offsets = new int [numberOfAttributes + 1];
+		int [] offsets = new int [numberOfAttributes];
 		offsets[0] = 0;
-		int tupleSize = 8;
+		int tupleSize = 0;
 		int i;
-		for (i = 1; i < numberOfAttributes + 1; i++) {
+		for (i = 0; i < numberOfAttributes; i++) {
 			offsets[i] = tupleSize;
-			if (fields.get(i-1).getType().toString().equals("BIGINT")) 
-				tupleSize += 8;
-			else
+			if ((fields.get(i).getType().toString().equals("FLOAT")) || (fields.get(i).getType().toString().equals("INTEGER"))) 
 				tupleSize += 4;
+			else
+				tupleSize += 8;
 		}
 		
 		
 		ITupleSchema schema = new TupleSchema (offsets, tupleSize);
 		schema.setAttributeType(0,  PrimitiveType.LONG);
-		for (i = 1; i < numberOfAttributes + 1; i++) {
-			if (fields.get(i-1).getType().toString().equals("BIGINT")) {
-				schema.setAttributeType(i, PrimitiveType.LONG);
-				schema.setAttributeName(i, fields.get(i-1).getName());
-			} else
-			if (fields.get(i-1).getType().toString().equals("FLOAT")) {
-				schema.setAttributeType(i, PrimitiveType.FLOAT);
-				schema.setAttributeName(i, fields.get(i-1).getName());
-			} else {
+		for (i = 0; i < numberOfAttributes; i++) {
+			if (fields.get(i).getType().toString().equals("INTEGER")) {
 				schema.setAttributeType(i, PrimitiveType.INT);
-				schema.setAttributeName(i, fields.get(i-1).getName());
+				schema.setAttributeName(i, fields.get(i).getName());
+			} else
+			if (fields.get(i).getType().toString().equals("FLOAT")) {
+				schema.setAttributeType(i, PrimitiveType.FLOAT);
+				schema.setAttributeName(i, fields.get(i).getName());
+			} else { //If an attribute is neither integer nor float, it is defined as long
+				schema.setAttributeType(i, PrimitiveType.LONG);
+				schema.setAttributeName(i, fields.get(i).getName());
 			}
 		}		
 		

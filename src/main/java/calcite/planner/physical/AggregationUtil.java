@@ -42,7 +42,7 @@ public class AggregationUtil {
 			if (aggregationTypes[i] == AggregationType.CNT) {
 				column = 0;
 			} else {				
-				column = ((AggregateCall) aggs.get(i)).getArgList().get(0) + 1; 				
+				column = ((AggregateCall) aggs.get(i)).getArgList().get(0); 				
 			}
 			aggregationAttributes[i] = new FloatColumnReference(column);
 			System.out.println("[DBG] aggregation Attribute string is " + aggregationAttributes[i]);
@@ -51,13 +51,22 @@ public class AggregationUtil {
 	}
 
 	/* Get the group by attributes*/
-	public Expression[] getGroupByAttributes(ImmutableBitSet groupSet) {
+	public Expression[] getGroupByAttributes(ImmutableBitSet groupSet, ITupleSchema schema) {
 		Expression [] groupByAttributes = null;
 		if (!groupSet.isEmpty()){
 			groupByAttributes = new Expression[groupSet.toList().size()];
 			int numberOfGroups = 0;
 			for (Integer ga : groupSet){
-				groupByAttributes[numberOfGroups] = new IntColumnReference(ga +1);
+				if (schema.getAttributeType(ga).toString().equals("INT"))
+					groupByAttributes[numberOfGroups] = new IntColumnReference(ga);
+				else if (schema.getAttributeType(ga).toString().equals("FLOAT"))
+					groupByAttributes[numberOfGroups] = new FloatColumnReference(ga);
+				else if (schema.getAttributeType(ga).toString().equals("LONG"))
+					groupByAttributes[numberOfGroups] = new LongColumnReference(ga);
+				else {
+					//throw exception
+				}
+
 				numberOfGroups++;
 			}
 			System.out.println("Number of groupByAttributes : "  + groupByAttributes.length);
@@ -70,45 +79,76 @@ public class AggregationUtil {
 		ITupleSchema outputSchema = null;
 		int i;
 		int numberOfKeyAttributes = (groupByAttributes == null)? 0 : groupByAttributes.length;
-		int n = numberOfKeyAttributes + aggregationTypes.length + 2; // add one column for timestamp and one for count
+		int n = numberOfKeyAttributes + aggregationTypes.length;
 		Expression [] outputAttributes = new Expression[n]; 		
-		outputAttributes[0] = new LongColumnReference(0);
+		//outputAttributes[0] = new LongColumnReference(0);
 
 		if (numberOfKeyAttributes > 0) {			
-			for (i = 1; i <= numberOfKeyAttributes; ++i) {				
-				Expression e = groupByAttributes[i - 1];
+			for (i = 0; i < numberOfKeyAttributes; ++i) {				
+				Expression e = groupByAttributes[i];
 				     if (e instanceof   IntExpression) { outputAttributes[i] = new   IntColumnReference(i);}
 				else if (e instanceof  LongExpression) { outputAttributes[i] = new  LongColumnReference(i);}
 				else if (e instanceof FloatExpression) { outputAttributes[i] = new FloatColumnReference(i);}
 				else
-					throw new IllegalArgumentException("error: invalid group-by attribute");
+					throw new IllegalArgumentException("error: invalid group-by attribute");				
 			}
 		}
-		
-		for (i = numberOfKeyAttributes + 1; i < n; ++i)
+
+		for (i = numberOfKeyAttributes; i < n; ++i) //fix the column references
 			outputAttributes[i] = new FloatColumnReference(i);
-		
-		/* Set count attribute */
-		if (groupByAttributes == null)
-			outputAttributes[n - 1] = new IntColumnReference(n - 1);					
-		
+										
 		//set column names
 		outputSchema = ExpressionsUtil.getTupleSchemaFromExpressions(outputAttributes);
+
 		String name;
 		if (numberOfKeyAttributes > 0) {			
-			for (i = 1; i <= numberOfKeyAttributes; ++i) {					
-				name = schema.getAttributeName(Integer.parseInt(groupByAttributes[i-1].toString().replace("\"", "")));
+			for (i = 0; i < numberOfKeyAttributes; ++i) {					
+				name = schema.getAttributeName(Integer.parseInt(groupByAttributes[i].toString().replace("\"", "")));
 				outputSchema.setAttributeName(i, name);
 			}
 		}
-		for (i = numberOfKeyAttributes + 1; i < n - 1; ++i){
-		 	name = schema.getAttributeName(Integer.parseInt(aggregationAttributes[i - numberOfKeyAttributes - 1].toString().replace("\"", "")));
-			outputSchema.setAttributeName(i, aggregationTypes[i - numberOfKeyAttributes - 1].toString() + "("
+		for (i = numberOfKeyAttributes; i < n; ++i){
+		 	name = schema.getAttributeName(Integer.parseInt(aggregationAttributes[i - numberOfKeyAttributes].toString().replace("\"", "")));
+			outputSchema.setAttributeName(i, aggregationTypes[i - numberOfKeyAttributes].toString() + "("
 					+ name + ")");
-		}
+		}		
+		return outputSchema;
+	}
+
+	public ITupleSchema createOutputSchemaForWindow(AggregationType[] aggregationTypes,
+			FloatColumnReference[] aggregationAttributes, ITupleSchema schema) {
+		ITupleSchema outputSchema = null;
+		int numberOfAttributes = schema.numberOfAttributes();
+		int n = numberOfAttributes + aggregationAttributes.length;
+		Expression [] outputAttributes = new Expression[n];
 		
-		/* Set count attribute */
-		outputSchema.setAttributeName(i,   "CNT(*"+ ")");
+		int i;
+		for (i=0; i < numberOfAttributes; i++) {
+			if (schema.getAttributeType(i).toString().equals("INT"))
+				outputAttributes[i] = new IntColumnReference(i);
+			else if (schema.getAttributeType(i).toString().equals("FLOAT"))
+				outputAttributes[i] = new FloatColumnReference(i);
+			else if (schema.getAttributeType(i).toString().equals("LONG"))
+				outputAttributes[i] = new LongColumnReference(i);				
+		}
+		for (i = numberOfAttributes; i < n; ++i) //fix the column references
+			outputAttributes[i] = new FloatColumnReference(i);
+										
+		//set column names
+		outputSchema = ExpressionsUtil.getTupleSchemaFromExpressions(outputAttributes);
+		
+		String name;
+		if (numberOfAttributes > 0) {			
+			for (i = 0; i < numberOfAttributes; ++i) {					
+				name = schema.getAttributeName(i);
+				outputSchema.setAttributeName(i, name);
+			}
+		}
+		for (i = numberOfAttributes; i < n; ++i){
+		 	name = schema.getAttributeName(Integer.parseInt(aggregationAttributes[i - numberOfAttributes].toString().replace("\"", "")));
+			outputSchema.setAttributeName(i, aggregationTypes[i - numberOfAttributes].toString() + "("
+					+ name + ")");
+		}		
 		return outputSchema;
 	}
 	

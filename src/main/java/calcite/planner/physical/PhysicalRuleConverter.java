@@ -83,11 +83,11 @@ public class PhysicalRuleConverter {
 			System.out.println(chainTail.getTable().getQualifiedName());
 			String tableKey = chainTail.getTable().getQualifiedName().toString().replace("[", "").replace("]", "").replace(", ", ".");
 			Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
-			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), null, pair.left, chainTail.getId(), timestampReference);	    
+			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), null, pair.left, chainTail.getId(), timestampReference, null);	    
 			SaberRule rule = operation.construct();
 			Query query = rule.getQuery();
 			ITupleSchema outputSchema = rule.getOutputSchema();
-			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,pair.right.left,false,false));
+			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,rule.getWindow(),pair.right.left,false,false));
 			System.out.println("OutputSchema : " + outputSchema.getSchema());
 			
 			return new Pair<Integer, String>(chainTail.getId(),chainTail.getRelTypeName());			
@@ -100,7 +100,7 @@ public class PhysicalRuleConverter {
 			//System.out.println(logicalPlan.getRelTypeName());
 			
 			ChainOfRules chain = chains.get(node.left);
-			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference);
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference, chain.getWindow());
 			SaberRule rule = operation.construct();
 		    
 			if ((logicalPlan.getRelTypeName().equals("LogicalAggregate")) || (logicalPlan.getRelTypeName().equals("LogicalWindow"))) {
@@ -112,9 +112,9 @@ public class PhysicalRuleConverter {
 			queryId++; //increment the queryId for the next query
 			if (!(node.right.equals("LogicalTableScan"))) {
 			    chain.getQuery().connectTo(query);
-			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,false));
+			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,false));
 			} else {
-				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),chain.getData(),false,true));
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,true));
 			}
 			queries.add(query); 		    		    		   		    
 			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
@@ -138,7 +138,7 @@ public class PhysicalRuleConverter {
 			ChainOfRules rightChain = chains.get(rightNode.left);
 			
 			String args = logicalPlan.getChildExps().toString();
-			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference);
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference, leftChain.getWindow(), rightChain.getWindow());
 			SaberRule rule = operation.construct();
 			Query query = rule.getQuery();
 			System.out.println("Current query id : "+ query.getId());
@@ -146,17 +146,17 @@ public class PhysicalRuleConverter {
 			if ((!(leftNode.right.equals("LogicalTableScan"))) && (!(rightNode.right.equals("LogicalTableScan")))) {
 			    leftChain.getQuery().connectTo(query);
 			    rightChain.getQuery().connectTo(query);
-			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),leftChain.getData(),rightChain.getData(),true,false,false));
+			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),leftChain.getData(),rightChain.getData(),true,false,false));
 			} else
 			if	((!(leftNode.right.equals("LogicalTableScan"))) && ((rightNode.right.equals("LogicalTableScan")))) {
 				leftChain.getQuery().connectTo(query);
-				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(), rightChain.getData() , leftChain.getData(),true,true,false));
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(), rule.getWindow(),rightChain.getData() , leftChain.getData(),true,true,false));
 			} else
 			if	(((leftNode.right.equals("LogicalTableScan"))) && (!(rightNode.right.equals("LogicalTableScan")))) {
 				rightChain.getQuery().connectTo(query);
-				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),leftChain.getData(), rightChain.getData(),true,true,false));
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(), rule.getWindow(),leftChain.getData(), rightChain.getData(),true,true,false));
 			} else {
-				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),leftChain.getData(), rightChain.getData(),true,true,true));
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(), rule.getWindow(), leftChain.getData(), rightChain.getData(),true,true,true));
 			}
 			
 			queries.add(query);		   		

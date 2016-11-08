@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.calcite.DataContext;
+import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
@@ -11,6 +12,7 @@ import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
@@ -40,18 +42,18 @@ public class OrdersTableFactory implements TableFactory<Table>  {
  */
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
-		    {1, 3, 10, 1},
-		    {2, 7, 5, 1},
-		    {3, 1, 12, 2},
-		    {4, 9, 3, 3},
-		    {5, 10, 3, 1},
-		    {6, 3, 13, 7},
-		    {7, 7, 15, 5},
-		    {8, 1, 2, 3},
-		    {9, 9, 3, 2},
-		    {10, 10, 2, 4},		    
-		    {11, 8, 1, 6},
-		    {12, 8, 12, 6}
+		    {ts(10,15,0), 1, 3, 10, 1},
+		    {ts(10,15,0), 2, 7, 5, 1},
+		    {ts(10,15,0), 3, 1, 12, 2},
+		    {ts(10,15,0), 4, 9, 3, 3},
+		    {ts(10,15,0), 5, 10, 3, 1},
+		    {ts(10,15,0), 6, 3, 13, 7},
+		    {ts(10,15,0), 7, 7, 15, 5},
+		    {ts(10,15,0), 8, 1, 2, 3},
+		    {ts(10,15,0), 9, 9, 3, 2},
+		    {ts(10,15,0), 10, 10, 2, 4},		    
+		    {ts(10,15,0), 11, 8, 1, 6},
+		    {ts(10,15,0), 12, 8, 12, 6}
 		};
 		return new OrdersTable(ImmutableList.copyOf(rows));
 	}
@@ -60,6 +62,7 @@ public class OrdersTableFactory implements TableFactory<Table>  {
 		protected final RelProtoDataType protoRowType = new RelProtoDataType() {
 			public RelDataType apply(RelDataTypeFactory a0) {
 		        return a0.builder()
+		        	.add("rowtime", SqlTypeName.TIMESTAMP)
 		            .add("orderid", SqlTypeName.INTEGER)
 		            .add("productid", SqlTypeName.INTEGER)
 		            .add("units", SqlTypeName.INTEGER)
@@ -84,12 +87,16 @@ public class OrdersTableFactory implements TableFactory<Table>  {
 
 		public Statistic getStatistic() {
 			int rowCount = rows.size();
-			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of()); //add List<ImmutableBitSet>
+			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of(), 
+					RelCollations.createSingleton(0)); //add List<ImmutableBitSet>
 		}
 
 		public Schema.TableType getJdbcTableType() {
 		    return Schema.TableType.TABLE;
-		}	
-		
+		}		
 	}
+	
+    private static Object ts(int h, int m, int s) {
+        return DateTimeUtils.unixTimestamp(2016, 10, 8, h, m, s);
+    }
 }

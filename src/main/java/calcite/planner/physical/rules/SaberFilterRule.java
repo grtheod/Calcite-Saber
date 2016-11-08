@@ -54,7 +54,7 @@ public class SaberFilterRule implements SaberRule {
 	int queryId = 0;
 	long timestampReference = 0;
 	
-	public SaberFilterRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference){
+	public SaberFilterRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window){
 		this.rel = rel;
 		this.schema = schema;
 		this.queryId = queryId;

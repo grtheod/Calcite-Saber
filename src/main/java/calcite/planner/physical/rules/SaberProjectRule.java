@@ -41,7 +41,7 @@ public class SaberProjectRule implements SaberRule {
 	int queryId = 0;
 	long timestampReference = 0;
 	
-	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference){
+	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window){
 		this.schema = schema;
 		this.rel = rel;
 		this.queryId = queryId;
@@ -65,16 +65,16 @@ public class SaberProjectRule implements SaberRule {
 		
 		projectedAttributes = projectedAttrs.size();
 		
-		Expression [] expressions = new Expression [projectedAttributes + 1];
+		Expression [] expressions = new Expression [projectedAttributes];
 		/* Always project the timestamp */
-		expressions[0] = new LongColumnReference(0);
+		//expressions[0] = new LongColumnReference(0);
 			
 		int column;
-		int i = 1;
+		int i = 0;
 		/*Fix the offset of schema references.*/
 		for (RexNode attr : projectedAttrs){
 			if (attr.getKind().toString().equals("INPUT_REF")) {				
-				column = Integer.parseInt(attr.toString().replace("$", "")) + 1;				
+				column = Integer.parseInt(attr.toString().replace("$", ""));				
 				if (schema.getAttributeType(column).equals(PrimitiveType.INT))
 					expressions[i] = new IntColumnReference (column);
 				else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
@@ -90,10 +90,10 @@ public class SaberProjectRule implements SaberRule {
 
 		/*Creating output Schema*/
 		outputSchema = ExpressionsUtil.getTupleSchemaFromExpressions(expressions);
-		i = 1;
+		i = 0;
 		for (RexNode attr : projectedAttrs){
 			if (attr.getKind().toString().equals("INPUT_REF")) {
-				column = Integer.parseInt(attr.toString().replace("$", "")) + 1;
+				column = Integer.parseInt(attr.toString().replace("$", ""));
 				outputSchema.setAttributeName(i, schema.getAttributeName(column));
 			} else {
 				outputSchema.setAttributeName(i, attr.toString());

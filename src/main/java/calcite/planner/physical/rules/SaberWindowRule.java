@@ -39,9 +39,10 @@ public class SaberWindowRule implements SaberRule{
 	int queryId = 0;
 	long timestampReference = 0;
 	
-	public SaberWindowRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference){
+	public SaberWindowRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window){
 		this.rel = rel;
 		this.schema = schema;
+		this.window = window;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;	
 	}
@@ -49,7 +50,10 @@ public class SaberWindowRule implements SaberRule{
 	public void prepareRule() {
 	
 		int batchSize = 1048576;
-		int windowSlide = 1; //We can't define the slide with the OVER function.
+		int windowSlide = 1;
+		if (!(window == null))
+			windowSlide = (int) window.getSlide(); 
+		
 		/*At this moment, a window has only one group of aggregate functions.*/
 		LogicalWindow windowAgg = (LogicalWindow) rel;		
 		WindowType windowType = (windowAgg.groups.get(0).isRows) ? WindowType.ROW_BASED : WindowType.RANGE_BASED;
@@ -58,13 +62,13 @@ public class SaberWindowRule implements SaberRule{
 		QueryConf queryConf = new QueryConf (batchSize);
 		
 		window = new WindowDefinition (windowType, windowRange, windowSlide);		
-		
+		//System.out.println("window is : " + window.toString());
 		AggregationUtil aggrHelper = new AggregationUtil();
 		Pair<AggregationType [],FloatColumnReference []>  aggr = aggrHelper.getAggregationTypesAndAttributes(windowAgg.groups.get(0).getAggregateCalls(windowAgg));
 		AggregationType [] aggregationTypes = aggr.left;
 		FloatColumnReference [] aggregationAttributes = aggr.right;
 		
-		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(windowAgg.groups.get(0).keys);
+		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(windowAgg.groups.get(0).keys, schema);
 		
 		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, groupByAttributes);
 		System.out.println(cpuCode);
@@ -81,7 +85,7 @@ public class SaberWindowRule implements SaberRule{
 		
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
 
-		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, groupByAttributes, schema);	
+		outputSchema = aggrHelper.createOutputSchemaForWindow(aggregationTypes, aggregationAttributes, schema);	
 	}
 
 	private int createWindowFrame(List<RexLiteral> constants) {

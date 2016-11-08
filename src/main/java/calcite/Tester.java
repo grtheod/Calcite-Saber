@@ -9,7 +9,9 @@ import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalWindow;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -59,24 +61,25 @@ public class Tester {
 		 * GROUP BY table1.attrx, ... 
 		 * ... 
 		 * */
-		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/		
-		RelNode logicalPlan = queryPlanner.getLogicalPlan (				
-		        "select avg(s.orders.productid) "
-		                + "from  s.orders "// s.customers,s.products  "
-		                //+ "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid "
-		                //+ " and units>5 "
-		               
-				//+ "group by productid "
-				//+ "window pr as (PARTITION BY productid ROWS BETWEEN 8 PRECEDING AND 10 FOLLOWING)"					
+		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/	
+		/*We recommend that you always include the rowtime column in the SELECT clause. Having a sorted 
+		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
+		 * such as GROUP BY and JOIN */
+		RelNode logicalPlan = queryPlanner.getLogicalPlan (
+		        "select rowtime, max(orderid) over pr ,count(orderid) over pr "
+		        + "from  s.orders "// ,s.products, s.customers  "
+		        //+ "where s.products.productid = s.orders.orderid and s.customers.customerid=s.orders.customerid "
+		        //+ " and units>5 "				        
+				//+ "group by s.orders.productid,rowtime "
+				+ "window pr as (PARTITION BY rowtime RANGE INTERVAL '2' SECOND PRECEDING)"					
 				);
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
 		
-		//logicalPlan = logicalPlan.getInput(0);
-		//LogicalProject ea = (LogicalProject) logicalPlan; 
-		//System.out.println (((RexCall)ea.getChildExps().get(0)).getOperator().toString());
-
-		
+		/*logicalPlan = logicalPlan.getInput(0);
+		LogicalWindow ea = (LogicalWindow) logicalPlan; 
+		System.out.println (((RexCall) ea.getChildExps()));*/
+	
 		/*Set System Configuration.*/
 		SystemConf sconf = new SystemConfig()
 				.setCircularBufferSize(32 * 1048576)
@@ -93,9 +96,9 @@ public class Tester {
 		long timestampReference = System.nanoTime();
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
-		//physicalPlan.convert (logicalPlan);
+		physicalPlan.convert (logicalPlan);
 		
-		//physicalPlan.execute();
+		physicalPlan.execute();
 		
 		/*
 		 * Notes:

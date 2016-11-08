@@ -52,6 +52,12 @@ public class ExpressionBuilder {
 	    	if (operator.equals("CAST")) { 
 	        	return null;
 	        }
+	    	if (operator.equals("FLOOR")) { 
+	        	return null;
+	        }
+	    	if (operator.equals("CEIL")) { 
+	        	return null;
+	        }
 	        return null;
 	    } else {  
 	    	Expression expr = null;
@@ -62,7 +68,7 @@ public class ExpressionBuilder {
 					expr = new FloatConstant(Float.parseFloat(expression.toString()));
 			} else 
 			if (expression.getKind().toString().equals("INPUT_REF")){
-				int column = Integer.parseInt(expression.toString().replace("$", "")) + 1;				
+				int column = Integer.parseInt(expression.toString().replace("$", ""));				
 				if (expression.getType().toString().equals("INTEGER"))
 					expr = new IntColumnReference (column);
 				else 

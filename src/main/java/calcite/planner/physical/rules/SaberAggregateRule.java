@@ -61,9 +61,10 @@ public class SaberAggregateRule implements SaberRule{
 	long timestampReference = 0;
 	
 	
-	public SaberAggregateRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference){
+	public SaberAggregateRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window){
 		this.rel = rel;
 		this.schema = schema;
+		this.window = window;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;	
 	}
@@ -71,21 +72,22 @@ public class SaberAggregateRule implements SaberRule{
 	public void prepareRule() {
 	
 		int batchSize = 1048576;
-		WindowType windowType = WindowType.ROW_BASED;
-		int windowRange = 1024;
-		int windowSlide = 1024;
+		if (window == null) {
+			WindowType windowType = WindowType.ROW_BASED;
+			int windowRange = 1024;
+			int windowSlide = 1024;
+			window = new WindowDefinition (windowType, windowRange, windowSlide);
+		}
 		LogicalAggregate aggregate = (LogicalAggregate) rel;
 		
 		QueryConf queryConf = new QueryConf (batchSize);
-		
-		window = new WindowDefinition (windowType, windowRange, windowSlide);		
-		
+						
 		AggregationUtil aggrHelper = new AggregationUtil();
 		Pair<AggregationType [],FloatColumnReference []>  aggr = aggrHelper.getAggregationTypesAndAttributes(aggregate.getAggCallList());
 		AggregationType [] aggregationTypes = aggr.left;
 		FloatColumnReference [] aggregationAttributes = aggr.right;
 		
-		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(aggregate.getGroupSet());
+		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(aggregate.getGroupSet(), schema);
 		
 		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, groupByAttributes);
 		System.out.println(cpuCode);
