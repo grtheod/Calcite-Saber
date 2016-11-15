@@ -66,7 +66,7 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-		        "select rowtime, max(orderid) ,max(orderid) over pr ,count(orderid) over pr "
+		        "select rowtime, max(orderid) over pr ,count(orderid) over pr "
 		        + "from  s.orders "// ,s.products, s.customers  "
 		        //+ "where s.products.productid = s.orders.orderid and s.customers.customerid=s.orders.customerid "
 		        //+ " and units>5 "				        
