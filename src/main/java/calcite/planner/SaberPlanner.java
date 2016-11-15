@@ -79,6 +79,7 @@ import calcite.planner.logical.EnumerableJoinToLogicalJoinRule;
 import calcite.planner.logical.EnumerableProjectToLogicalProjectRule;
 import calcite.planner.logical.EnumerableTableScanToLogicalTableScanRule;
 import calcite.planner.logical.EnumerableWindowToLogicalWindowRule;
+import calcite.planner.logical.FilterPushThroughFilter;
 import calcite.planner.physical.SaberLogicalConvention;
 
 /**
@@ -112,6 +113,7 @@ public class SaberPlanner {
     	    FilterJoinRule.FILTER_ON_JOIN,
     	    FilterJoinRule.JOIN, /*push filter into the children of a join*/
     	    FilterTableScanRule.INSTANCE,
+    	    //FilterPushThroughFilter.INSTANCE,
     	    
     	    // push and merge projection rules
     	    /*check the effectiveness of pushing down projections*/

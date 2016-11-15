@@ -75,31 +75,11 @@ public class AggregationUtil {
 	}	
 	
 	/* Create output schema */
-	public ITupleSchema createOutputSchema(AggregationType[] aggregationTypes, FloatColumnReference[] aggregationAttributes, Expression[] groupByAttributes, ITupleSchema schema) {	
-		ITupleSchema outputSchema = null;
-		int i;
-		int numberOfKeyAttributes = (groupByAttributes == null)? 0 : groupByAttributes.length;
-		int n = numberOfKeyAttributes + aggregationTypes.length;
-		Expression [] outputAttributes = new Expression[n]; 		
-		//outputAttributes[0] = new LongColumnReference(0);
-
-		if (numberOfKeyAttributes > 0) {			
-			for (i = 0; i < numberOfKeyAttributes; ++i) {				
-				Expression e = groupByAttributes[i];
-				     if (e instanceof   IntExpression) { outputAttributes[i] = new   IntColumnReference(i);}
-				else if (e instanceof  LongExpression) { outputAttributes[i] = new  LongColumnReference(i);}
-				else if (e instanceof FloatExpression) { outputAttributes[i] = new FloatColumnReference(i);}
-				else
-					throw new IllegalArgumentException("error: invalid group-by attribute");				
-			}
-		}
-
-		for (i = numberOfKeyAttributes; i < n; ++i) //fix the column references
-			outputAttributes[i] = new FloatColumnReference(i);
-										
-		//set column names
-		outputSchema = ExpressionsUtil.getTupleSchemaFromExpressions(outputAttributes);
-
+	public ITupleSchema createOutputSchema(AggregationType[] aggregationTypes, FloatColumnReference[] aggregationAttributes, Expression[] groupByAttributes, 
+			ITupleSchema schema, ITupleSchema outputSchema) {	
+		int i = 0;
+		int numberOfKeyAttributes = groupByAttributes.length;
+		int n = outputSchema.numberOfAttributes();
 		String name;
 		if (numberOfKeyAttributes > 0) {			
 			for (i = 0; i < numberOfKeyAttributes; ++i) {					
@@ -107,11 +87,12 @@ public class AggregationUtil {
 				outputSchema.setAttributeName(i, name);
 			}
 		}
-		for (i = numberOfKeyAttributes; i < n; ++i){
+		for (i = numberOfKeyAttributes; i < n - 1; ++i){
 		 	name = schema.getAttributeName(Integer.parseInt(aggregationAttributes[i - numberOfKeyAttributes].toString().replace("\"", "")));
 			outputSchema.setAttributeName(i, aggregationTypes[i - numberOfKeyAttributes].toString() + "("
 					+ name + ")");
 		}		
+		outputSchema.setAttributeName(n-1, "CNT()");
 		return outputSchema;
 	}
 

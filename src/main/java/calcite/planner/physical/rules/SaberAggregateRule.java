@@ -104,7 +104,8 @@ public class SaberAggregateRule implements SaberRule{
 		
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
 
-		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, groupByAttributes, schema);	
+		outputSchema = ((Aggregation) cpuCode).getOutputSchema();		
+		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, groupByAttributes, schema,outputSchema);	
 	}
 
 	public ITupleSchema getOutputSchema(){

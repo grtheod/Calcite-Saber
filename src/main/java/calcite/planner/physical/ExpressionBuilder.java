@@ -20,19 +20,21 @@ import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntDivision;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntExpression;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntMultiplication;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntSubtraction;
+import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
 
 public class ExpressionBuilder {
 
 	RexNode expression;
+	int windowBorder = 0;
 	
 	public ExpressionBuilder(RexNode expression) {
 		this.expression = expression;
 	}
 
-	public Expression build() {
+	public Pair<Expression, Integer> build() {
 		Expression saberExpression = getExpression(expression).right;	
 		System.out.println(saberExpression.toString());
-		return saberExpression;
+		return new Pair<Expression, Integer>(saberExpression,this.windowBorder);
 	}
 
 	private Pair<RexNode, Expression> getExpression(RexNode expression) {
@@ -52,11 +54,19 @@ public class ExpressionBuilder {
 	    	if (operator.equals("CAST")) { 
 	        	return null;
 	        }
-	    	if (operator.equals("FLOOR")) { 
-	        	return null;
+	    	if (operator.equals("FLOOR")) {
+	    		//create floor expression
+	    		//operands.get(0); 
+	    		
+	    		this.windowBorder = createWindow(operands.get(1).left.toString().replace("FLAG(", "").replace(")", ""));
+	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
 	        }
 	    	if (operator.equals("CEIL")) { 
-	        	return null;
+	    		//create ceil expression
+	    		//operands.get(0);
+
+	    		this.windowBorder = createWindow(operands.get(1).left.toString().replace("FLAG(", "").replace(")", ""));
+	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
 	        }
 	        return null;
 	    } else {  
@@ -64,18 +74,39 @@ public class ExpressionBuilder {
 			if (expression.getKind().toString().equals("LITERAL")) {				
 				if (expression.getType().toString().equals("INTEGER"))
 					expr = new IntConstant(Integer.parseInt(expression.toString()));
-				else  
+				else if (expression.getType().toString().equals("FLOAT"))
 					expr = new FloatConstant(Float.parseFloat(expression.toString()));
+				else
+					expr = new LongColumnReference (0);// added for supporting floor,ceil
 			} else 
 			if (expression.getKind().toString().equals("INPUT_REF")){
 				int column = Integer.parseInt(expression.toString().replace("$", ""));				
 				if (expression.getType().toString().equals("INTEGER"))
 					expr = new IntColumnReference (column);
-				else 
+				else if (expression.getType().toString().equals("FLOAT"))
 					expr = new FloatColumnReference (column);
+				else
+					expr = new LongColumnReference (column);
 			} 			
 	    	return new Pair<RexNode,Expression>(expression,expr);
 	    }
+	}
+
+	private int createWindow(String timeUnit) {
+		int size = 0;
+		if (timeUnit.equals("SECOND")) {
+			size = 1000;
+		} else
+		if (timeUnit.equals("MINUTE")) {
+			size = 60000;
+		} else
+		if (timeUnit.equals("HOUR")) {
+			size = 3600000;
+		} else
+		if (timeUnit.equals("DAY")) {
+			size = 86400000;
+		}		
+		return size;
 	}
 
 	private Expression getSimpleExpression(List<Pair<RexNode, Expression>> operands, String operator) {
@@ -121,6 +152,8 @@ public class ExpressionBuilder {
 		return simpleExpression;
 	}
 
-	
+	public int getWindowBorder() {
+		return this.windowBorder;
+	}
 	
 }

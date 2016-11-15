@@ -62,7 +62,7 @@ public class SaberWindowRule implements SaberRule{
 		QueryConf queryConf = new QueryConf (batchSize);
 		
 		window = new WindowDefinition (windowType, windowRange, windowSlide);		
-		//System.out.println("window is : " + window.toString());
+		System.out.println("window is : " + window.toString());
 		AggregationUtil aggrHelper = new AggregationUtil();
 		Pair<AggregationType [],FloatColumnReference []>  aggr = aggrHelper.getAggregationTypesAndAttributes(windowAgg.groups.get(0).getAggregateCalls(windowAgg));
 		AggregationType [] aggregationTypes = aggr.left;
@@ -84,8 +84,11 @@ public class SaberWindowRule implements SaberRule{
 		operators.add(operator);
 		
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
-
-		outputSchema = aggrHelper.createOutputSchemaForWindow(aggregationTypes, aggregationAttributes, schema);	
+		
+		outputSchema = ((Aggregation) cpuCode).getOutputSchema();		
+		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, groupByAttributes, schema,outputSchema);	
+		// fix the output or throw errors
+		//outputSchema = aggrHelper.createOutputSchemaForWindow(aggregationTypes, aggregationAttributes, schema);			
 	}
 
 	private int createWindowFrame(List<RexLiteral> constants) {

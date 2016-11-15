@@ -7,6 +7,7 @@ import java.util.Set;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.util.Pair;
 
 import calcite.planner.physical.ExpressionBuilder;
 import calcite.planner.physical.SaberRule;
@@ -82,7 +83,13 @@ public class SaberProjectRule implements SaberRule {
 				else
 					expressions[i] = new LongColumnReference (column);
 			} else {
-				expressions[i] = new ExpressionBuilder(attr).build();
+				Pair<Expression, Integer> pair = new ExpressionBuilder(attr).build();			
+				expressions[i] = pair.left;
+				if (pair.right > 0) {
+					windowRange = pair.right;
+					windowSlide = pair.right;
+					windowType = WindowType.RANGE_BASED;
+				}
 			}
 			//column =  Integer.parseInt(((RexCall)((RexCall) attr).operands.get(1)).getOperands().get(0).toString().replace("$", ""));
 			i++;
@@ -110,7 +117,10 @@ public class SaberProjectRule implements SaberRule {
 		Set<QueryOperator> operators = new HashSet<QueryOperator>();
 		operators.add(operator);
 			
-		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
+		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);
+		//resize the window according to possible changes from input
+		window = new WindowDefinition (windowType, windowRange, windowSlide);
+		//System.out.println(window.toString());
 	}
 		
 	public ITupleSchema getOutputSchema(){
