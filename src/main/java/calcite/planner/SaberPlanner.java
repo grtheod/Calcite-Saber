@@ -109,11 +109,11 @@ public class SaberPlanner {
     	    // push and merge filter rules
     	    FilterAggregateTransposeRule.INSTANCE,
     	    FilterProjectTransposeRule.INSTANCE,
-    	    FilterMergeRule.INSTANCE,
+    	    //FilterMergeRule.INSTANCE,
     	    FilterJoinRule.FILTER_ON_JOIN,
     	    FilterJoinRule.JOIN, /*push filter into the children of a join*/
     	    FilterTableScanRule.INSTANCE,
-    	    //FilterPushThroughFilter.INSTANCE,
+    	    FilterPushThroughFilter.INSTANCE,
     	    
     	    // push and merge projection rules
     	    /*check the effectiveness of pushing down projections*/
@@ -163,7 +163,8 @@ public class SaberPlanner {
     		EnumerableRules.ENUMERABLE_PROJECT_RULE,
     		EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
     		EnumerableRules.ENUMERABLE_JOIN_RULE,
-    		EnumerableRules.ENUMERABLE_WINDOW_RULE
+    		EnumerableRules.ENUMERABLE_WINDOW_RULE,
+    		EnumerableRules.ENUMERABLE_VALUES_RULE
             );
     
     SaberRelOptCostFactory saberCostFactory = new SaberCostBase.SaberCostFactory(); //custom factory with rates

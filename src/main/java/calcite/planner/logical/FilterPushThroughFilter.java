@@ -7,6 +7,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
@@ -27,7 +28,7 @@ public class FilterPushThroughFilter extends RelOptRule {
    * <p>It matches any kind of join or filter, and generates the same kind of
    * join and filter. */
   public static final FilterPushThroughFilter INSTANCE =
-      new FilterPushThroughFilter(Filter.class, Filter.class,
+      new FilterPushThroughFilter(LogicalFilter.class, LogicalFilter.class,
           RelFactories.LOGICAL_BUILDER);
 
 
@@ -71,13 +72,9 @@ public class FilterPushThroughFilter extends RelOptRule {
         // Correlate from being de-correlated.
         return;
     }
-               
-    final RelBuilder relBuilder = call.builder();
-    relBuilder.push(filter)
-    	.filter(secFilter.getCondition())
-    	.build();
 
-
-    call.transformTo(relBuilder.build());
+    final LogicalFilter newFilter = LogicalFilter.create(secFilter.getInput(), filter.getCondition());
+    final LogicalFilter newSecFilter = LogicalFilter.create(newFilter, secFilter.getCondition());
+    call.transformTo(newSecFilter);
   }
 }
