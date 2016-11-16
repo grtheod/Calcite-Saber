@@ -37,8 +37,7 @@ public class PhysicalRuleConverter {
 	long timestampReference;
 	int queryId;
 	
-	public PhysicalRuleConverter (RelNode logicalPlan, Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap , SystemConf systemConf, long timestampReference) {
-		
+	public PhysicalRuleConverter (RelNode logicalPlan, Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap , SystemConf systemConf, long timestampReference) {		
 		this.logicalPlan = logicalPlan;
 		this.tablesMap = tablesMap;
 		this.systemConf = systemConf;
@@ -47,16 +46,39 @@ public class PhysicalRuleConverter {
 		this.queryId = 0;
 	}
 	
-	public Pair<Integer, String> convert (RelNode logicalPlan) {
-		
-		//Log has to be updated in a better way.
-		
-		//log.info("Convert logical plan");
+	public void convert(RelNode logicalPlan) {
+		log.info("Convert logical plan");
 		log.info(String.format("Root is %s", logicalPlan.toString()));
 		
 		List<RelNode> inputs = logicalPlan.getInputs();
-		log.info(String.format("Root has %d inputs", inputs.size()));
+		log.info(String.format("Root has %d inputs", inputs.size()));				
+		if (inputs.size() == 0) {			
+			convertSingleRelNode(logicalPlan);
+		} else {
+			convertMultipleRelNodes(logicalPlan);
+		}
 		
+	}
+	
+	//degenerate case : simple TableScan RelNode (select * from table).
+	public void convertSingleRelNode(RelNode chainTail) {		
+		log.info(String.format("Node %2d is %s", chainTail.getId(), chainTail.toString()));
+		System.out.println();
+		System.out.println(chainTail.getRelTypeName());
+		System.out.println(chainTail.getTable().getQualifiedName());
+		String tableKey = chainTail.getTable().getQualifiedName().toString().replace("[", "").replace("]", "").replace(", ", ".");
+		Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
+		queryId = 0;
+		RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), pair.left, queryId, timestampReference, true);	    
+		SaberRule rule = operation.construct();
+		Query query = rule.getQuery();
+		chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),pair.right.left,false,true));
+		System.out.println("Current query id : "+ query.getId());
+		queries.add(query); 		    		    		   		    
+		System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
+	}
+	
+	public Pair<Integer, String> convertMultipleRelNodes(RelNode logicalPlan) {
 		/*
 		 * Finds a chain of operators that finishes at the current root.
 		 * 
@@ -69,21 +91,20 @@ public class PhysicalRuleConverter {
 		 * 	construct this operator, we have to construct its children first.
 		 * 3)If children.size() == 2, we have a join. In order to built a join, we create
 		 * 	recursively its left and right side children.
-		 */
-		
+		 */		
 		RelNode chainTail = logicalPlan;
 			
 		log.info(String.format("Node %2d is %s", chainTail.getId(), chainTail.toString()));
 		
 		List<RelNode> children = chainTail.getInputs();
 		if (children.size() == 0){	
-			//fix simple table scan
 			System.out.println();
 			System.out.println(chainTail.getRelTypeName());
 			System.out.println(chainTail.getTable().getQualifiedName());
 			String tableKey = chainTail.getTable().getQualifiedName().toString().replace("[", "").replace("]", "").replace(", ", ".");
 			Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
-			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), null, pair.left, chainTail.getId(), timestampReference, null);	    
+			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), pair.left, queryId, timestampReference, false);
+													 //(chainTail.getRelTypeName(), null, pair.left, chainTail.getId(), timestampReference, null);	    
 			SaberRule rule = operation.construct();
 			Query query = rule.getQuery();
 			ITupleSchema outputSchema = rule.getOutputSchema();
@@ -94,7 +115,7 @@ public class PhysicalRuleConverter {
 		} else
 		if (children.size() == 1) {
 			chainTail = children.get(0);
-			Pair <Integer, String> node = convert(chainTail);
+			Pair <Integer, String> node = convertMultipleRelNodes(chainTail);
 			
 			System.out.println("-------------------------------------------");
 			//System.out.println(logicalPlan.getRelTypeName());
@@ -127,14 +148,14 @@ public class PhysicalRuleConverter {
 			/*Build left side of join*/
 			chainTail = children.get(0);
 			System.out.println(chainTail);
-			Pair <Integer, String> leftNode = convert(chainTail);			
+			Pair <Integer, String> leftNode = convertMultipleRelNodes(chainTail);			
 			ChainOfRules leftChain = chains.get(leftNode.left);
 			
 			System.out.println("-------------------------------------------");
 			/*Build right side of join*/
 			chainTail = children.get(1);
 			System.out.println(chainTail);
-			Pair <Integer, String> rightNode = convert(chainTail);			
+			Pair <Integer, String> rightNode = convertMultipleRelNodes(chainTail);			
 			ChainOfRules rightChain = chains.get(rightNode.left);
 			
 			String args = logicalPlan.getChildExps().toString();
@@ -195,10 +216,10 @@ public class PhysicalRuleConverter {
 		
 		try {
 			while (true) {
-				for (Map.Entry<Integer,ChainOfRules> c : chains.entrySet()){	
+				for (Map.Entry<Integer,ChainOfRules> c : chains.entrySet()){						
 					if(c.getValue().getIsFirst()) {
 						if(c.getValue().getFlag() == false) {
-							application.processData (c.getValue().getData());
+							application.processData (c.getValue().getData());							
 						} else {
 							/*the first case doesn't work.*/
 							if(c.getValue().getHasMore() == true) {

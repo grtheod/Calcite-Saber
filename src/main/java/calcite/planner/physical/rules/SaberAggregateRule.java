@@ -77,7 +77,8 @@ public class SaberAggregateRule implements SaberRule{
 			int windowRange = 1024;
 			int windowSlide = 1024;
 			window = new WindowDefinition (windowType, windowRange, windowSlide);
-		}
+		} 
+		System.out.println(window.toString());
 		LogicalAggregate aggregate = (LogicalAggregate) rel;
 		
 		QueryConf queryConf = new QueryConf (batchSize);

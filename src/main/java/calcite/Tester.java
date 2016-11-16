@@ -66,11 +66,11 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-	            "select rowtime, max(orderid) over pr ,count(orderid) over pr "
+	            "select rowtime, min(orderid) over pr ,count(orderid) over pr "
 	            + "from  s.orders "// ,s.products, s.customers  "
 	            //+ "where s.products.productid = s.orders.orderid and s.customers.customerid=s.orders.customerid "
 	            //+ " and units>5 "               
-	            //+ "group by s.orders.productid,rowtime "
+	            //+ "group by s.orders.productid,rowtime, FLOOR(rowtime to SECOND) "
 	            + "window pr as (PARTITION BY rowtime RANGE INTERVAL '1' HOUR PRECEDING)"         
 	            );
 				
@@ -96,9 +96,9 @@ public class Tester {
 		long timestampReference = System.nanoTime();
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
-		//physicalPlan.convert (logicalPlan);
+		physicalPlan.convert (logicalPlan);
 		
-		//physicalPlan.execute();
+		physicalPlan.execute();
 		
 		/*
 		 * Notes:

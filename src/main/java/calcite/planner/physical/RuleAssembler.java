@@ -26,6 +26,15 @@ public class RuleAssembler {
 	WindowDefinition window1, window2;
 	int queryId;
 	long timestampReference;
+	boolean flag = false;
+	
+	public RuleAssembler(String operator, ITupleSchema schema, int queryId, long timestampReference, boolean flag){
+		this.operator = operator;
+		this.schema1 = schema;
+		this.queryId = queryId;		
+		this.timestampReference = timestampReference;
+		this.flag = flag;
+	}
 	
 	public RuleAssembler(String operator, RelNode rel, ITupleSchema schema, int queryId, long timestampReference, WindowDefinition window){
 		this.operator = operator;
@@ -72,7 +81,7 @@ public class RuleAssembler {
 				return aggregate;			
 			case SCAN :
 				System.out.println("==> Assembling Scan");
-				SaberScanRule scan = new SaberScanRule(schema1);
+				SaberScanRule scan = new SaberScanRule(schema1, queryId, timestampReference, flag);
 				scan.prepareRule();				
 				return scan;
 			case WINDOW :
