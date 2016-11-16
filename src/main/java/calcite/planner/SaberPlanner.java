@@ -163,8 +163,10 @@ public class SaberPlanner {
     		EnumerableRules.ENUMERABLE_PROJECT_RULE,
     		EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
     		EnumerableRules.ENUMERABLE_JOIN_RULE,
-    		EnumerableRules.ENUMERABLE_WINDOW_RULE,
-    		EnumerableRules.ENUMERABLE_VALUES_RULE
+    		EnumerableRules.ENUMERABLE_WINDOW_RULE
+    		//EnumerableRules.ENUMERABLE_VALUES_RULE //The VALUES clause creates an inline table with a given set of rows.
+    												 //Streaming is disallowed. The set of rows never changes, and therefore 
+    												 //a stream would never return any rows.*/
             );
     
     SaberRelOptCostFactory saberCostFactory = new SaberCostBase.SaberCostFactory(); //custom factory with rates

@@ -28,7 +28,7 @@ public class FilterPushThroughFilter extends RelOptRule {
    * <p>It matches any kind of join or filter, and generates the same kind of
    * join and filter. */
   public static final FilterPushThroughFilter INSTANCE =
-      new FilterPushThroughFilter(LogicalFilter.class, LogicalFilter.class,
+      new FilterPushThroughFilter(Filter.class, Filter.class,
           RelFactories.LOGICAL_BUILDER);
 
 

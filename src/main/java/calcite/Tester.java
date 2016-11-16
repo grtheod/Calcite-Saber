@@ -66,10 +66,13 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-				"select * from ( "
-				+ "select * from s.orders where orderid > 5) as c "
-				+ "where c.orderid = 5"
-				);
+	            "select rowtime, max(orderid) over pr ,count(orderid) over pr "
+	            + "from  s.orders "// ,s.products, s.customers  "
+	            //+ "where s.products.productid = s.orders.orderid and s.customers.customerid=s.orders.customerid "
+	            //+ " and units>5 "               
+	            //+ "group by s.orders.productid,rowtime "
+	            + "window pr as (PARTITION BY rowtime RANGE INTERVAL '1' HOUR PRECEDING)"         
+	            );
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
 		
