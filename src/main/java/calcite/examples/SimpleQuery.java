@@ -1,14 +1,8 @@
 package calcite.examples;
 
-import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
-
-import calcite.planner.QueryPlanner;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

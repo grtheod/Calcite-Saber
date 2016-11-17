@@ -24,10 +24,11 @@ public class RuleAssembler {
 	RelNode rel;
 	ITupleSchema schema1, schema2;
 	WindowDefinition window1, window2;
-	int queryId;
+	int queryId, windowOffset;
 	long timestampReference;
 	boolean flag = false;
 	
+	// constructor for table scan operator
 	public RuleAssembler(String operator, ITupleSchema schema, int queryId, long timestampReference, boolean flag){
 		this.operator = operator;
 		this.schema1 = schema;
@@ -36,15 +37,7 @@ public class RuleAssembler {
 		this.flag = flag;
 	}
 	
-	public RuleAssembler(String operator, RelNode rel, ITupleSchema schema, int queryId, long timestampReference, WindowDefinition window){
-		this.operator = operator;
-		this.rel = rel;
-		this.schema1 = schema;
-		this.window1 = window;
-		this.queryId = queryId;		
-		this.timestampReference = timestampReference;
-	}
-	
+	// constructor for join operator
 	public RuleAssembler(String operator, RelNode rel, ITupleSchema schema1, ITupleSchema schema2, int queryId, long timestampReference, WindowDefinition window1, WindowDefinition window2){
 		this.operator = operator;
 		this.rel = rel;
@@ -56,12 +49,23 @@ public class RuleAssembler {
 		this.timestampReference = timestampReference;
 	}
 	
+	// constructor for the rest of operators
+	public RuleAssembler(String operator, RelNode rel, ITupleSchema schema, int queryId, long timestampReference, WindowDefinition window, int windowOffset){
+		this.operator = operator;
+		this.rel = rel;
+		this.schema1 = schema;
+		this.window1 = window;
+		this.queryId = queryId;		
+		this.timestampReference = timestampReference;
+		this.windowOffset = windowOffset;
+	}
+	
 	public SaberRule construct(){
 		
 		switch (operator){			
 			case PROJECT :			
 				System.out.println("==> Assembling Projection");
-				SaberProjectRule project = new SaberProjectRule(schema1, rel, queryId, timestampReference, null);
+				SaberProjectRule project = new SaberProjectRule(schema1, rel, queryId, timestampReference, null, windowOffset);
 				project.prepareRule();				
 				return project;
 			case FILTER :

@@ -8,20 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import calcite.utils.SaberSchema;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
 import uk.ac.imperial.lsds.saber.QueryApplication;
 import uk.ac.imperial.lsds.saber.SystemConf;
-import uk.ac.imperial.lsds.saber.Utils;
 import uk.ac.imperial.lsds.saber.cql.operators.IAggregateOperator;
 
 public class PhysicalRuleConverter {
@@ -60,7 +55,7 @@ public class PhysicalRuleConverter {
 		
 	}
 	
-	//degenerate case : simple TableScan RelNode (select * from table).
+	//Degenerate case : simple TableScan RelNode (select * from table).
 	public void convertSingleRelNode(RelNode chainTail) {		
 		log.info(String.format("Node %2d is %s", chainTail.getId(), chainTail.toString()));
 		System.out.println();
@@ -72,12 +67,13 @@ public class PhysicalRuleConverter {
 		RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), pair.left, queryId, timestampReference, true);	    
 		SaberRule rule = operation.construct();
 		Query query = rule.getQuery();
-		chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),pair.right.left,false,true));
+		chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),pair.right.left,false,true,0));
 		System.out.println("Current query id : "+ query.getId());
 		queries.add(query); 		    		    		   		    
 		System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
 	}
 	
+	//General case.
 	public Pair<Integer, String> convertMultipleRelNodes(RelNode logicalPlan) {
 		/*
 		 * Finds a chain of operators that finishes at the current root.
@@ -97,7 +93,7 @@ public class PhysicalRuleConverter {
 		log.info(String.format("Node %2d is %s", chainTail.getId(), chainTail.toString()));
 		
 		List<RelNode> children = chainTail.getInputs();
-		if (children.size() == 0){	
+		if (children.size() == 0){	//logicalTableScan operator
 			System.out.println();
 			System.out.println(chainTail.getRelTypeName());
 			System.out.println(chainTail.getTable().getQualifiedName());
@@ -108,12 +104,12 @@ public class PhysicalRuleConverter {
 			SaberRule rule = operation.construct();
 			Query query = rule.getQuery();
 			ITupleSchema outputSchema = rule.getOutputSchema();
-			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,rule.getWindow(),pair.right.left,false,false));
+			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,rule.getWindow(),pair.right.left,false,false,0));
 			System.out.println("OutputSchema : " + outputSchema.getSchema());
 			
 			return new Pair<Integer, String>(chainTail.getId(),chainTail.getRelTypeName());			
 		} else
-		if (children.size() == 1) {
+		if (children.size() == 1) { //aggregate,window, filter or project operator
 			chainTail = children.get(0);
 			Pair <Integer, String> node = convertMultipleRelNodes(chainTail);
 			
@@ -121,7 +117,7 @@ public class PhysicalRuleConverter {
 			//System.out.println(logicalPlan.getRelTypeName());
 			
 			ChainOfRules chain = chains.get(node.left);
-			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference, chain.getWindow());
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference, chain.getWindow(), chain.getWindowOffset());
 			SaberRule rule = operation.construct();
 		    
 			if ((logicalPlan.getRelTypeName().equals("LogicalAggregate")) || (logicalPlan.getRelTypeName().equals("LogicalWindow"))) {
@@ -133,16 +129,17 @@ public class PhysicalRuleConverter {
 			queryId++; //increment the queryId for the next query
 			if (!(node.right.equals("LogicalTableScan"))) {
 			    chain.getQuery().connectTo(query);
-			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,false));
-			} else {
-				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,true));
+			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,false,rule.getWindowOffset()));
+			} else { 
+				//the first operator after LogicalTableScan is assigned to process the input data
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,true,rule.getWindowOffset()));
 			}
 			queries.add(query); 		    		    		   		    
 			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
 			
 			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
 		} else
-		if (children.size() == 2) {
+		if (children.size() == 2) { //join operator
 			
 			System.out.println("-------------------------------------------");
 			/*Build left side of join*/

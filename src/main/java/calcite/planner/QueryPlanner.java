@@ -66,7 +66,6 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import calcite.planner.physical.SaberLogicalConvention;

@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.Pair;
 
@@ -22,11 +21,11 @@ import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
 import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatColumnReference;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntConstant;
 import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
 import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
 import uk.ac.imperial.lsds.saber.cql.operators.cpu.Projection;
 import uk.ac.imperial.lsds.saber.cql.operators.gpu.ProjectionKernel;
+
 /*Wrong result after join*/
 public class SaberProjectRule implements SaberRule {
 	public static final String usage = "usage: Projection";
@@ -41,12 +40,14 @@ public class SaberProjectRule implements SaberRule {
 	Query query;
 	int queryId = 0;
 	long timestampReference = 0;
+	int windowOffset;
 	
-	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window){
+	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int windowOffset) {
 		this.schema = schema;
 		this.rel = rel;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
+		this.windowOffset = windowOffset;
 	}
 	
 	public void prepareRule() {
@@ -72,17 +73,19 @@ public class SaberProjectRule implements SaberRule {
 			
 		int column;
 		int i = 0;
-		/*Fix the offset of schema references.*/
 		for (RexNode attr : projectedAttrs){
 			if (attr.getKind().toString().equals("INPUT_REF")) {				
-				column = Integer.parseInt(attr.toString().replace("$", ""));				
+				column = Integer.parseInt(attr.toString().replace("$", ""));
+				if (column >= windowOffset) //fix the offset when the previous operator was LogicalWindow
+					column -= windowOffset - 1;
 				if (schema.getAttributeType(column).equals(PrimitiveType.INT))
 					expressions[i] = new IntColumnReference (column);
 				else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
 					expressions[i] = new FloatColumnReference (column);
 				else
 					expressions[i] = new LongColumnReference (column);
-			} else {
+			} else { 
+				//pass the windowOffset to more complex expressions
 				Pair<Expression, Integer> pair = new ExpressionBuilder(attr).build();			
 				expressions[i] = pair.left;
 				if (pair.right > 0) {
@@ -90,8 +93,7 @@ public class SaberProjectRule implements SaberRule {
 					windowSlide = pair.right;
 					windowType = WindowType.RANGE_BASED;
 				}
-			}
-			//column =  Integer.parseInt(((RexCall)((RexCall) attr).operands.get(1)).getOperands().get(0).toString().replace("$", ""));
+			}			
 			i++;
 		}
 
@@ -101,6 +103,8 @@ public class SaberProjectRule implements SaberRule {
 		for (RexNode attr : projectedAttrs){
 			if (attr.getKind().toString().equals("INPUT_REF")) {
 				column = Integer.parseInt(attr.toString().replace("$", ""));
+				if (column >= windowOffset) //fix the offset when the previous operator was LogicalWindow
+					column -= windowOffset - 1;
 				outputSchema.setAttributeName(i, schema.getAttributeName(column));
 			} else {
 				outputSchema.setAttributeName(i, attr.toString());
@@ -145,6 +149,10 @@ public class SaberProjectRule implements SaberRule {
 
 	public WindowDefinition getWindow2() {
 		return null;
+	}
+
+	public int getWindowOffset() {
+		return 0;
 	}
 	
 }

@@ -1,11 +1,8 @@
 package calcite.planner.physical.rules;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import org.apache.calcite.adapter.enumerable.EnumerableJoin;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rex.RexNode;
@@ -20,15 +17,10 @@ import uk.ac.imperial.lsds.saber.QueryOperator;
 import uk.ac.imperial.lsds.saber.WindowDefinition;
 import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntConstant;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntExpression;
 import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
 import uk.ac.imperial.lsds.saber.cql.operators.cpu.ThetaJoin;
 import uk.ac.imperial.lsds.saber.cql.operators.gpu.ThetaJoinKernel;
-import uk.ac.imperial.lsds.saber.cql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.saber.cql.predicates.IPredicate;
-import uk.ac.imperial.lsds.saber.cql.predicates.IntComparisonPredicate;
 
 public class SaberJoinRule implements SaberRule{
 	
@@ -125,5 +117,9 @@ public class SaberJoinRule implements SaberRule{
 
 	public WindowDefinition getWindow2() {
 		return window2;
+	}
+
+	public int getWindowOffset() {
+		return 0;
 	}
 }

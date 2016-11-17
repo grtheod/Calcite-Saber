@@ -1,20 +1,12 @@
 package calcite.planner.physical.rules;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import org.apache.calcite.adapter.enumerable.EnumerableFilter;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalFilter;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.Pair;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 
 import calcite.planner.physical.PredicateUtil;
 import calcite.planner.physical.SaberRule;
@@ -22,22 +14,12 @@ import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
 import uk.ac.imperial.lsds.saber.QueryConf;
 import uk.ac.imperial.lsds.saber.QueryOperator;
-import uk.ac.imperial.lsds.saber.SystemConf;
-import uk.ac.imperial.lsds.saber.TupleSchema;
-import uk.ac.imperial.lsds.saber.TupleSchema.PrimitiveType;
 import uk.ac.imperial.lsds.saber.WindowDefinition;
 import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
-import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntConstant;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntExpression;
 import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
 import uk.ac.imperial.lsds.saber.cql.operators.cpu.Selection;
 import uk.ac.imperial.lsds.saber.cql.operators.gpu.SelectionKernel;
-import uk.ac.imperial.lsds.saber.cql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.saber.cql.predicates.IPredicate;
-import uk.ac.imperial.lsds.saber.cql.predicates.IntComparisonPredicate;
-import uk.ac.imperial.lsds.saber.cql.predicates.ORPredicate;
 
 public class SaberFilterRule implements SaberRule {
 	
@@ -114,6 +96,10 @@ public class SaberFilterRule implements SaberRule {
 
 	public WindowDefinition getWindow2() {
 		return null;
+	}
+	
+	public int getWindowOffset() {
+		return 0;
 	}
 	
 }

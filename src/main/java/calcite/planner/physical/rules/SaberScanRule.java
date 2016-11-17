@@ -3,10 +3,6 @@ package calcite.planner.physical.rules;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.util.Pair;
-
-import calcite.planner.physical.ExpressionBuilder;
 import calcite.planner.physical.SaberRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
@@ -16,7 +12,6 @@ import uk.ac.imperial.lsds.saber.WindowDefinition;
 import uk.ac.imperial.lsds.saber.TupleSchema.PrimitiveType;
 import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
-import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatColumnReference;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
 import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
@@ -111,6 +106,10 @@ public class SaberScanRule implements SaberRule {
 
 	public WindowDefinition getWindow2() {
 		return null;
+	}
+
+	public int getWindowOffset() {
+		return 0;
 	}
 	
 }

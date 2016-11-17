@@ -69,13 +69,20 @@ public class SaberWindowRule implements SaberRule{
 		FloatColumnReference [] aggregationAttributes = aggr.right;
 		
 		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(windowAgg.groups.get(0).keys, schema);
+		Expression [] limitedGroupByAttributes = null; //without rowtime column
+		if (!(groupByAttributes == null) && (groupByAttributes.length > 1)) {
+			int i;
+			limitedGroupByAttributes = new Expression [groupByAttributes.length - 1];
+			for (i=1; i < groupByAttributes.length; i++)
+				limitedGroupByAttributes[i-1] = groupByAttributes[i]; 
+		}
 		
-		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, groupByAttributes);
+		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, limitedGroupByAttributes);
 		System.out.println(cpuCode);
-		if (groupByAttributes == null) 
+		if (limitedGroupByAttributes == null) 
 			gpuCode = new ReductionKernel (window, aggregationTypes, aggregationAttributes, schema, batchSize);
 		else
-			gpuCode = new AggregationKernel (window, aggregationTypes, aggregationAttributes, groupByAttributes, schema, batchSize);
+			gpuCode = new AggregationKernel (window, aggregationTypes, aggregationAttributes, limitedGroupByAttributes, schema, batchSize);
 		
 		QueryOperator operator;
 		operator = new QueryOperator (cpuCode, gpuCode);
@@ -86,7 +93,7 @@ public class SaberWindowRule implements SaberRule{
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
 		
 		outputSchema = ((Aggregation) cpuCode).getOutputSchema();		
-		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, groupByAttributes, schema,outputSchema);	
+		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, limitedGroupByAttributes, schema,outputSchema);	
 		// fix the output or throw errors
 		//outputSchema = aggrHelper.createOutputSchemaForWindow(aggregationTypes, aggregationAttributes, schema);			
 	}
@@ -120,6 +127,11 @@ public class SaberWindowRule implements SaberRule{
 
 	public WindowDefinition getWindow2() {
 		return null;
+	}
+
+	@Override
+	public int getWindowOffset() {
+		return this.schema.numberOfAttributes();
 	}
 	
 }

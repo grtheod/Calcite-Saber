@@ -19,4 +19,6 @@ public interface SaberRule {
 	
 	public WindowDefinition getWindow2();
 	
+	public int getWindowOffset();
+	
 }

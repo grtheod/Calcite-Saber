@@ -2,9 +2,7 @@ package calcite.planner.physical;
 
 import java.util.List;
 
-import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Window.RexWinAggCall;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 
@@ -12,11 +10,8 @@ import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
 import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatExpression;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntExpression;
 import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongExpression;
 import uk.ac.imperial.lsds.saber.cql.operators.AggregationType;
 
 public class AggregationUtil {
@@ -40,7 +35,7 @@ public class AggregationUtil {
 		int column;
 		for (int i = 0; i < aggs.size(); ++i){
 			if (aggregationTypes[i] == AggregationType.CNT) {
-				column = 0;
+				column = 0; //fix the column
 			} else {				
 				column = ((AggregateCall) aggs.get(i)).getArgList().get(0); 				
 			}
@@ -78,21 +73,30 @@ public class AggregationUtil {
 	public ITupleSchema createOutputSchema(AggregationType[] aggregationTypes, FloatColumnReference[] aggregationAttributes, Expression[] groupByAttributes, 
 			ITupleSchema schema, ITupleSchema outputSchema) {	
 		int i = 0;
-		int numberOfKeyAttributes = groupByAttributes.length;
+		int numberOfKeyAttributes = 0; 
 		int n = outputSchema.numberOfAttributes();
+		outputSchema.setAttributeName(0, "rowcount"); //by default the first column is related with LongColumnReference(0) and must be first
+		if (groupByAttributes == null) {
+			outputSchema.setAttributeName(n-1, "CNT()");		
+			n = n - 1;
+		} else 
+			numberOfKeyAttributes = groupByAttributes.length;
+			
 		String name;
 		if (numberOfKeyAttributes > 0) {			
 			for (i = 0; i < numberOfKeyAttributes; ++i) {					
 				name = schema.getAttributeName(Integer.parseInt(groupByAttributes[i].toString().replace("\"", "")));
-				outputSchema.setAttributeName(i, name);
+				outputSchema.setAttributeName(i + 1, name);
 			}
-		}
-		for (i = numberOfKeyAttributes; i < n - 1; ++i){
+		}		
+				 			
+		numberOfKeyAttributes++; //fix the array pointer		
+		//System.out.println("oS:"+outputSchema.getSchema()+" nOfKeyAttrs:"+numberOfKeyAttributes+" n:"+n);
+		for (i = numberOfKeyAttributes; i < n ; ++i) {
 		 	name = schema.getAttributeName(Integer.parseInt(aggregationAttributes[i - numberOfKeyAttributes].toString().replace("\"", "")));
 			outputSchema.setAttributeName(i, aggregationTypes[i - numberOfKeyAttributes].toString() + "("
 					+ name + ")");
 		}		
-		outputSchema.setAttributeName(n-1, "CNT()");
 		return outputSchema;
 	}
 

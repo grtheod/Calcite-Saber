@@ -1,49 +1,26 @@
 package calcite.planner.physical.rules;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import org.apache.calcite.adapter.enumerable.EnumerableAggregate;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.logical.LogicalAggregate;
-import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 
 import calcite.planner.physical.AggregationUtil;
 import calcite.planner.physical.SaberRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
-import uk.ac.imperial.lsds.saber.QueryApplication;
 import uk.ac.imperial.lsds.saber.QueryConf;
 import uk.ac.imperial.lsds.saber.QueryOperator;
-import uk.ac.imperial.lsds.saber.SystemConf;
-import uk.ac.imperial.lsds.saber.TupleSchema;
-import uk.ac.imperial.lsds.saber.Utils;
 import uk.ac.imperial.lsds.saber.WindowDefinition;
-import uk.ac.imperial.lsds.saber.TupleSchema.PrimitiveType;
 import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
-import uk.ac.imperial.lsds.saber.cql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatConstant;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatDivision;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatExpression;
-import uk.ac.imperial.lsds.saber.cql.expressions.floats.FloatMultiplication;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntExpression;
-import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
-import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongExpression;
 import uk.ac.imperial.lsds.saber.cql.operators.AggregationType;
-import uk.ac.imperial.lsds.saber.cql.operators.IAggregateOperator;
 import uk.ac.imperial.lsds.saber.cql.operators.IOperatorCode;
 import uk.ac.imperial.lsds.saber.cql.operators.cpu.Aggregation;
-import uk.ac.imperial.lsds.saber.cql.operators.cpu.Projection;
 import uk.ac.imperial.lsds.saber.cql.operators.gpu.AggregationKernel;
-import uk.ac.imperial.lsds.saber.cql.operators.gpu.ProjectionKernel;
 import uk.ac.imperial.lsds.saber.cql.operators.gpu.ReductionKernel;
 
 public class SaberAggregateRule implements SaberRule{
@@ -88,14 +65,23 @@ public class SaberAggregateRule implements SaberRule{
 		AggregationType [] aggregationTypes = aggr.left;
 		FloatColumnReference [] aggregationAttributes = aggr.right;
 		
+		//error with rowtime column : should always be placed first in groupBy!!!
+		//ImmutableBitSet groupSet = aggregate.getGroupSet().except(ImmutableBitSet.of(0));
 		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(aggregate.getGroupSet(), schema);
+		Expression [] limitedGroupByAttributes = null; //without rowtime column
+		if (!(groupByAttributes == null) && (groupByAttributes.length > 1)) {
+			int i;
+			limitedGroupByAttributes = new Expression [groupByAttributes.length - 1];
+			for (i=1; i < groupByAttributes.length; i++)
+				limitedGroupByAttributes[i-1] = groupByAttributes[i]; 
+		}
 		
-		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, groupByAttributes);
+		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, limitedGroupByAttributes);
 		System.out.println(cpuCode);
-		if (groupByAttributes == null)
+		if (limitedGroupByAttributes == null) //maybe change it
 			gpuCode = new ReductionKernel (window, aggregationTypes, aggregationAttributes, schema, batchSize);
 		else
-			gpuCode = new AggregationKernel (window, aggregationTypes, aggregationAttributes, groupByAttributes, schema, batchSize);
+			gpuCode = new AggregationKernel (window, aggregationTypes, aggregationAttributes, limitedGroupByAttributes, schema, batchSize);
 		
 		QueryOperator operator;
 		operator = new QueryOperator (cpuCode, gpuCode);
@@ -105,8 +91,8 @@ public class SaberAggregateRule implements SaberRule{
 		
 		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);				
 
-		outputSchema = ((Aggregation) cpuCode).getOutputSchema();		
-		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, groupByAttributes, schema,outputSchema);	
+		outputSchema = ((Aggregation) cpuCode).getOutputSchema();
+		outputSchema = aggrHelper.createOutputSchema(aggregationTypes, aggregationAttributes, limitedGroupByAttributes, schema,outputSchema);	
 	}
 
 	public ITupleSchema getOutputSchema(){
@@ -131,6 +117,10 @@ public class SaberAggregateRule implements SaberRule{
 
 	public WindowDefinition getWindow2() {
 		return null;
+	}
+	
+	public int getWindowOffset() {				
+		return 0;
 	}
 	
 }

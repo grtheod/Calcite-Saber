@@ -1,6 +1,5 @@
 package calcite.utils;
 
-import java.util.List;
 import java.util.Map;
 
 import org.apache.calcite.DataContext;
@@ -20,11 +19,8 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TableFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableBitSet;
-import org.apache.calcite.util.ImmutableIntList;
 
 import com.google.common.collect.ImmutableList;
-
-import calcite.utils.OrdersTableFactory.OrdersTable;
 
 public class ProductsTableFactory implements TableFactory<Table>  {
 	

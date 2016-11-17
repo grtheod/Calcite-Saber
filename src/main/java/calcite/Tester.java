@@ -4,19 +4,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 
-import org.apache.calcite.adapter.enumerable.EnumerableAggregate;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.rel.logical.LogicalWindow;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlExplainLevel;
 
-import calcite.planner.QueryPlanner;
 import calcite.planner.SaberPlanner;
 import calcite.planner.physical.PhysicalRuleConverter;
 import calcite.planner.physical.SystemConfig;
@@ -66,20 +60,16 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-	            "select rowtime, min(orderid) over pr ,count(orderid) over pr "
+	            "select rowtime, min(orderid) over pr ,count(orderid) over pr  "
 	            + "from  s.orders "// ,s.products, s.customers  "
 	            //+ "where s.products.productid = s.orders.orderid and s.customers.customerid=s.orders.customerid "
 	            //+ " and units>5 "               
-	            //+ "group by s.orders.productid,rowtime, FLOOR(rowtime to SECOND) "
-	            + "window pr as (PARTITION BY rowtime RANGE INTERVAL '1' HOUR PRECEDING)"         
+	            //+ "group by rowtime,s.orders.productid,orderid, floor(rowtime to hour) "
+	            + "window pr as (PARTITION BY floor(rowtime to second) RANGE INTERVAL '1' HOUR PRECEDING)"         
 	            );
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
-		
-		/*logicalPlan = logicalPlan.getInput(0);
-		LogicalWindow ea = (LogicalWindow) logicalPlan; 
-		System.out.println (((RexCall) ea.getChildExps()));*/
-	
+			
 		/*Set System Configuration.*/
 		SystemConf sconf = new SystemConfig()
 				.setCircularBufferSize(32 * 1048576)
@@ -98,7 +88,7 @@ public class Tester {
 		
 		physicalPlan.convert (logicalPlan);
 		
-		physicalPlan.execute();
+		//physicalPlan.execute();
 		
 		/*
 		 * Notes:
