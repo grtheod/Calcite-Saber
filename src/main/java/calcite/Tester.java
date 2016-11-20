@@ -3,6 +3,9 @@ package calcite;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;
@@ -33,13 +36,13 @@ public class Tester {
 		
 		SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
 		
+		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));
 		schema.add("orders",   new     OrdersTableFactory().create(schema,    "orders", null, null));
 		schema.add("products", new   ProductsTableFactory().create(schema,  "products", null, null));
-		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));
 		
 		/* Create a schema in Saber from a given SchemaPlus and add some mock data for testing.*/
 		DataGenerator dataGenerator = new DataGenerator()
-						.setSchema(schema, true)
+						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(8192,32768, 16384)))
 						.build();
 		
 		Statement statement = connection.createStatement();
@@ -60,12 +63,11 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-	            "select rowtime, min(orderid) over pr ,count(orderid) over pr  "
-	            + "from  s.orders "// ,s.products, s.customers  "
-	            //+ "where s.products.productid = s.orders.orderid and s.customers.customerid=s.orders.customerid "
-	            //+ " and units>5 "               
-	            //+ "group by rowtime,s.orders.productid,orderid, floor(rowtime to hour) "
-	            + "window pr as (PARTITION BY floor(rowtime to second) RANGE INTERVAL '1' HOUR PRECEDING)"         
+	            "select s1.rowtime from ( "
+	            + "select rowtime,units "
+	            + "from s.orders "	             	            
+	            + ") as s1 "
+	            + " "        
 	            );
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
@@ -88,7 +90,7 @@ public class Tester {
 		
 		physicalPlan.convert (logicalPlan);
 		
-		//physicalPlan.execute();
+		physicalPlan.execute();
 		
 		/*
 		 * Notes:

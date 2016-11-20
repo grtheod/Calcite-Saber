@@ -2,6 +2,7 @@ package calcite.utils;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.util.Pair;
@@ -11,7 +12,7 @@ import uk.ac.imperial.lsds.saber.TupleSchema;
 import uk.ac.imperial.lsds.saber.TupleSchema.PrimitiveType;
 
 public class SaberSchema {
-	int tuplesPerInsert = 32768; // get it as an attribute	
+	//int tuplesPerInsert = 32768; // get it as an attribute	
 	
 	/* Create a schema in Saber from a given list of Calcite's DataTypes.*/
 	public ITupleSchema createTable(List<RelDataTypeField> fields ){
@@ -49,27 +50,30 @@ public class SaberSchema {
 	}
 	
 	/* Create a mock table from a given schema*/
-	public Pair<byte [],ByteBuffer> fillTable(ITupleSchema schema){
+	public Pair<byte [],ByteBuffer> fillTable(ITupleSchema schema, int tuplesPerInsert){
 		
 		int tupleSize = schema.getTupleSize();
 		int numberOfAttributes = schema.numberOfAttributes() - 1;
 		byte [] data = new byte [tupleSize * tuplesPerInsert];
+		Random random = new Random();
 		
 		ByteBuffer b = ByteBuffer.wrap(data);
 		/* Fill the buffer */
+		long timestamp = 1;
 		while (b.hasRemaining()) {
-			b.putLong (1);
+			b.putLong (timestamp);
 			for (int i = 0; i < numberOfAttributes; i ++) {
 				
 				if (schema.getAttributeType(i + 1).equals(PrimitiveType.LONG)) 
-					b.putLong (1);
+					b.putLong (random.nextLong());
 				else
 				if (schema.getAttributeType(i + 1).equals(PrimitiveType.FLOAT)) 
-					b.putFloat (1);
+					b.putFloat (random.nextFloat());
 				else  
-					b.putInt(1);
+					b.putInt(random.nextInt());
 			}
 			b.put(schema.getPad());
+			//timestamp++;
 		}
 		
 		return new Pair<byte [],ByteBuffer>(data,b);		

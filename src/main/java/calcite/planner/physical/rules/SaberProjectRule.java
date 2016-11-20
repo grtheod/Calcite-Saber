@@ -76,8 +76,8 @@ public class SaberProjectRule implements SaberRule {
 		for (RexNode attr : projectedAttrs){
 			if (attr.getKind().toString().equals("INPUT_REF")) {				
 				column = Integer.parseInt(attr.toString().replace("$", ""));
-				if (column >= windowOffset) //fix the offset when the previous operator was LogicalWindow
-					column -= windowOffset - 1;
+				if ((windowOffset != 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalWindow
+					column -= windowOffset - 1;				
 				if (schema.getAttributeType(column).equals(PrimitiveType.INT))
 					expressions[i] = new IntColumnReference (column);
 				else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
@@ -103,7 +103,7 @@ public class SaberProjectRule implements SaberRule {
 		for (RexNode attr : projectedAttrs){
 			if (attr.getKind().toString().equals("INPUT_REF")) {
 				column = Integer.parseInt(attr.toString().replace("$", ""));
-				if (column >= windowOffset) //fix the offset when the previous operator was LogicalWindow
+				if ((windowOffset != 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalWindow
 					column -= windowOffset - 1;
 				outputSchema.setAttributeName(i, schema.getAttributeName(column));
 			} else {

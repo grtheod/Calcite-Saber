@@ -43,11 +43,14 @@ public class SchemaConverter {
 	
 	
 	/* Fill the tables with dummy data for testing*/
-	public Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> setMockInput(List<Pair<String,ITupleSchema>> tableList){
+	public Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> setMockInput(List<Pair<String,ITupleSchema>> tableList, List<Integer> tuplesPerInsertList){
 		Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap = new HashMap<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>>();
-		for (Pair<String,ITupleSchema> p : tableList){			
-			Pair<byte [],ByteBuffer> mockData = new SaberSchema().fillTable(p.right);
+		int i=0;
+		for (Pair<String,ITupleSchema> p : tableList){		
+			//System.out.println( p.right.getSchema() + " with tuplesPerInsert :" + tuplesPerInsertList.get(i));
+			Pair<byte [],ByteBuffer> mockData = new SaberSchema().fillTable(p.right, tuplesPerInsertList.get(i));
 			tablesMap.put(p.left, new Pair <ITupleSchema,Pair<byte [],ByteBuffer>>(p.right,mockData));
+			i++;
 		}				
 		return tablesMap;
 	}

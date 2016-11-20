@@ -62,7 +62,8 @@ public class ProductsTableFactory implements TableFactory<Table>  {
 		}
 
 		public Statistic getStatistic() {
-			int rowCount = rows.size();
+			//int rowCount = rows.size();
+			int rowCount = 16384;
 			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of(),
 					RelCollations.createSingleton(0)); //add List<ImmutableBitSet>
 		}

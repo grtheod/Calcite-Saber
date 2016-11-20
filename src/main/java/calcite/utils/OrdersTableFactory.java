@@ -75,7 +75,8 @@ public class OrdersTableFactory implements TableFactory<Table>  {
 		}
 
 		public Statistic getStatistic() {
-			int rowCount = rows.size();
+			//int rowCount = rows.size();
+			int rowCount = 32768;
 			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of(), 
 					RelCollations.createSingleton(0)); //add List<ImmutableBitSet>
 		}

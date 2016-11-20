@@ -49,7 +49,7 @@ public class SaberAggregateRule implements SaberRule{
 	public void prepareRule() {
 	
 		int batchSize = 1048576;
-		if (window == null) {
+		if ((window == null) || ((window.getSize()==1) && (window.getSlide()==1))) {
 			WindowType windowType = WindowType.ROW_BASED;
 			int windowRange = 1024;
 			int windowSlide = 1024;
