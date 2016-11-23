@@ -42,7 +42,7 @@ public class ProductsTableFactory implements TableFactory<Table>  {
 		        return a0.builder()
 		        	.add("rowtime", SqlTypeName.TIMESTAMP)
 		            .add("productid", SqlTypeName.INTEGER)
-		            .add("description", SqlTypeName.VARCHAR,10)
+		            .add("description", SqlTypeName.INTEGER)
 		            .build();
 			}	
 		};

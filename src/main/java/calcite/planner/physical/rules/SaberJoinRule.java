@@ -50,19 +50,21 @@ public class SaberJoinRule implements SaberRule{
 	public void prepareRule() {
 
 		int batchSize = 1048576;
-		if (window1 == null) {
+		if ((window1 == null) || ((window1.getSize()==1) && (window1.getSlide()==1))) {
 			WindowType windowType1 = WindowType.ROW_BASED;
 			int windowRange1 = 1024;
 			int windowSlide1 = 1024;
 			window1 = new WindowDefinition (windowType1, windowRange1, windowSlide1);
 			
 		}
-		if (window2 == null) {
+		if ((window2 == null) || ((window2.getSize()==1) && (window2.getSlide()==1))) {
 			WindowType windowType2 = WindowType.ROW_BASED;
 			int windowRange2 = 1024;
 			int windowSlide2 = 1024;
 			window2 = new WindowDefinition (windowType2, windowRange2, windowSlide2);
 		}
+		System.out.println("Window1 is : " + window1.toString());
+		System.out.println("Window2 is : " + window2.toString());
 		LogicalJoin join = (LogicalJoin) rel;
 		RexNode condition = join.getCondition();
 		

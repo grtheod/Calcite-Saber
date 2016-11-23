@@ -37,6 +37,7 @@ import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.JoinAssociateRule;
+import org.apache.calcite.rel.rules.JoinCommuteRule;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
@@ -142,14 +143,16 @@ public class SaberPlanner {
     	    //LoptOptimizeJoinRule.INSTANCE ,
     	    //MultiJoinOptimizeBushyRule.INSTANCE,
     	    JoinPushThroughJoinRule.RIGHT,
-    	    JoinPushThroughJoinRule.LEFT, /*choose between right and left*/
+    	    JoinPushThroughJoinRule.LEFT,
     	    JoinPushExpressionsRule.INSTANCE,
     	    JoinAssociateRule.INSTANCE,
-    	    //JoinCommuteRule.INSTANCE,
+    	    JoinCommuteRule.INSTANCE,
     	    
     	    // simplify expressions rules    	    
     	    ReduceExpressionsRule.FILTER_INSTANCE,
     	    ReduceExpressionsRule.PROJECT_INSTANCE,
+    	    ReduceExpressionsRule.JOIN_INSTANCE,    	    
+    	    //ReduceDecimalsRule.INSTANCE,
     	    // prune empty results rules   
     	    PruneEmptyRules.FILTER_INSTANCE,
     	    PruneEmptyRules.PROJECT_INSTANCE,

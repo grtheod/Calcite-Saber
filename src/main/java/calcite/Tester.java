@@ -63,12 +63,10 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-	            "select s1.rowtime from ( "
-	            + "select rowtime,units "
-	            + "from s.orders "	             	            
-	            + ") as s1 "
-	            + " "        
-	            );
+			    "select s.orders.rowtime,s.orders.productid  "
+			    	    + "from  s.products,s.orders  "
+			    	    + "where s.orders.productid = s.products.productid  "
+			    	    );
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
 			
