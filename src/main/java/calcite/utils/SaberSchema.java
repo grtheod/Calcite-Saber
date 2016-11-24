@@ -73,7 +73,7 @@ public class SaberSchema {
 					b.putInt(random.nextInt(33));
 			}
 			b.put(schema.getPad());
-			//timestamp++;
+			timestamp++;
 		}
 		
 		return new Pair<byte [],ByteBuffer>(data,b);		

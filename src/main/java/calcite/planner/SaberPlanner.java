@@ -1,6 +1,7 @@
 package calcite.planner;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
@@ -9,6 +10,7 @@ import org.apache.calcite.config.Lex;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepMatchOrder;
@@ -41,6 +43,7 @@ import org.apache.calcite.rel.rules.JoinCommuteRule;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
+import org.apache.calcite.rel.rules.JoinPushTransitivePredicatesRule;
 import org.apache.calcite.rel.rules.JoinToMultiJoinRule;
 import org.apache.calcite.rel.rules.LoptJoinTree;
 import org.apache.calcite.rel.rules.LoptOptimizeJoinRule;
@@ -67,6 +70,7 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelConversionException;
+import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.ValidationException;
 
 import com.google.common.collect.ImmutableList;
@@ -95,13 +99,13 @@ public class SaberPlanner {
   private final Planner planner;
   private final HepPlanner hepPlanner;
 
-  public SaberPlanner(SchemaPlus schema) {
+  public SaberPlanner(SchemaPlus schema, boolean greedyJoinOrder, boolean bushyJoin) {
     final List<RelTraitDef> traitDefs = new ArrayList<RelTraitDef>();
 
     traitDefs.add(ConventionTraitDef.INSTANCE);
     traitDefs.add(RelCollationTraitDef.INSTANCE);
     
-    Program program =Programs.ofRules(    		
+    ImmutableList<RelOptRule> VOLCANO_RULES = ImmutableList.of(    		
     	    ProjectToWindowRule.PROJECT,
     	    //TableScanRule.INSTANCE
     	    
@@ -125,6 +129,7 @@ public class SaberPlanner {
     	    ProjectTableScanRule.INSTANCE,
     	    ProjectWindowTransposeRule.INSTANCE, /*maybe it has to be implemented in hepPlanner*/
     	    ProjectMergeRule.INSTANCE,
+    	    //maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
     	    
     	    //aggregate rules
     	    AggregateRemoveRule.INSTANCE,
@@ -142,11 +147,13 @@ public class SaberPlanner {
     	    //JoinToMultiJoinRule.INSTANCE ,
     	    //LoptOptimizeJoinRule.INSTANCE ,
     	    //MultiJoinOptimizeBushyRule.INSTANCE,
-    	    JoinPushThroughJoinRule.RIGHT,
-    	    JoinPushThroughJoinRule.LEFT,
+            JoinPushThroughJoinRule.LEFT, 
+            JoinPushThroughJoinRule.RIGHT,
+            JoinAssociateRule.INSTANCE,
     	    JoinPushExpressionsRule.INSTANCE,
-    	    JoinAssociateRule.INSTANCE,
     	    JoinCommuteRule.INSTANCE,
+    	    //maybe implement JoinAddNotNullRule.INSTANCE
+    	    JoinPushTransitivePredicatesRule.INSTANCE, //Planner rule that infers predicates from on a Join and creates Filter if those predicates can be pushed to its inputs.
     	    
     	    // simplify expressions rules    	    
     	    ReduceExpressionsRule.FILTER_INSTANCE,
@@ -161,17 +168,22 @@ public class SaberPlanner {
     	    PruneEmptyRules.JOIN_RIGHT_INSTANCE,
     	    
     	    /*Enumerable Rules*/
-    		EnumerableRules.ENUMERABLE_FILTER_RULE,
-    		EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-    		EnumerableRules.ENUMERABLE_PROJECT_RULE,
-    		EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
-    		EnumerableRules.ENUMERABLE_JOIN_RULE,
-    		EnumerableRules.ENUMERABLE_WINDOW_RULE
-    		//EnumerableRules.ENUMERABLE_VALUES_RULE //The VALUES clause creates an inline table with a given set of rows.
+    	    EnumerableRules.ENUMERABLE_FILTER_RULE,
+    	    EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
+    	    EnumerableRules.ENUMERABLE_PROJECT_RULE,
+    	    EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
+    	    EnumerableRules.ENUMERABLE_JOIN_RULE,
+    	    EnumerableRules.ENUMERABLE_WINDOW_RULE
+    	    //EnumerableRules.ENUMERABLE_VALUES_RULE //The VALUES clause creates an inline table with a given set of rows.
     												 //Streaming is disallowed. The set of rows never changes, and therefore 
     												 //a stream would never return any rows.*/
             );
     
+    if (greedyJoinOrder) {
+    	//fix the greedy case
+    }
+    
+    Program program =Programs.ofRules(VOLCANO_RULES);
     SaberRelOptCostFactory saberCostFactory = new SaberCostBase.SaberCostFactory(); //custom factory with rates
     FrameworkConfig config = Frameworks.newConfigBuilder()
         .parserConfig(SqlParser.configBuilder()
@@ -200,12 +212,14 @@ public class SaberPlanner {
     hepProgramBuilder.addRuleClass(ProjectJoinTransposeRule.class);
     hepProgramBuilder.addRuleClass(ProjectRemoveRule.class);
     hepProgramBuilder.addRuleClass(ProjectTableScanRule.class);
-    hepProgramBuilder.addRuleClass(ProjectWindowTransposeRule.class); /*maybe it has to be implemented in hepPlanner*/
+    hepProgramBuilder.addRuleClass(ProjectWindowTransposeRule.class);
     hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
     hepProgramBuilder.addRuleClass(AggregateProjectMergeRule.class);
     hepProgramBuilder.addRuleClass(AggregateProjectPullUpConstantsRule.class);
-    
-    //hepProgramBuilder.addMatchOrder(HepMatchOrder.ARBITRARY);
+    hepProgramBuilder.addRuleClass(JoinToMultiJoinRule.class);
+    hepProgramBuilder.addRuleClass(LoptOptimizeJoinRule.class);
+       
+    hepProgramBuilder.addMatchOrder(HepMatchOrder.BOTTOM_UP);
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
      final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
       	with the option to keep the graph a tree(noDAG=true) or allow DAG(noDAG=false).
@@ -228,6 +242,8 @@ public class SaberPlanner {
     this.hepPlanner.addRule(ProjectMergeRule.INSTANCE);
     this.hepPlanner.addRule(AggregateProjectMergeRule.INSTANCE);
     this.hepPlanner.addRule(AggregateProjectPullUpConstantsRule.INSTANCE);
+    //this.hepPlanner.addRule(JoinToMultiJoinRule.INSTANCE);
+    //this.hepPlanner.addRule(LoptOptimizeJoinRule.INSTANCE); //Planner rule that implements the heuristic planner for determining optimal join orderings.
   }
 
   public RelNode hepOptimization(RelNode convertedNode) throws RelConversionException {	 	   

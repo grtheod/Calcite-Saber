@@ -47,7 +47,11 @@ public class Tester {
 		
 		Statement statement = connection.createStatement();
 		/*SaberPlanner is a combination of both Volcano and heuristic planner.*/
-		SaberPlanner queryPlanner = new SaberPlanner(rootSchema);
+		/*SaberPlanner's constructor needs (Schema, greedyJoinOrder, bushy).
+		 * @greedyJoinOrder is a boolean that defines if the Join Reorder will be greedy or not
+		 * @bushy is a boolean that defines if the want a bushy Join Reorder or not 
+		 * */
+		SaberPlanner queryPlanner = new SaberPlanner(rootSchema, false, false);
 		
 		/* Until it is fixed, when joining two tables and then using group by, the attributes of group by predicate should be 
 		 * from the first table. For example:
@@ -63,12 +67,13 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-			    "select s.orders.rowtime,s.orders.productid  "
-			    	    + "from  s.products,s.orders  "
-			    	    + "where s.orders.productid = s.products.productid  "
-			    	    );
+				"select s.orders.productid  " 
+					    + "from  s.orders,s.products, s.customers " 
+					    + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid " 
+					    + " and units>5 " 
+					    );
 				
-		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.EXPPLAN_ATTRIBUTES));
+		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
 			
 		/*Set System Configuration.*/
 		SystemConf sconf = new SystemConfig()
@@ -86,9 +91,9 @@ public class Tester {
 		long timestampReference = System.nanoTime();
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
-		physicalPlan.convert (logicalPlan);
+		//physicalPlan.convert (logicalPlan);
 		
-		physicalPlan.execute();
+		//physicalPlan.execute();
 		
 		/*
 		 * Notes:
