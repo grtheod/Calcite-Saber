@@ -105,7 +105,7 @@ public class SaberPlanner {
     traitDefs.add(ConventionTraitDef.INSTANCE);
     traitDefs.add(RelCollationTraitDef.INSTANCE);
     
-    ImmutableList<RelOptRule> VOLCANO_RULES = ImmutableList.of(    		
+    List<RelOptRule> VOLCANO_RULES = new ArrayList<RelOptRule>(Arrays.asList(    		
     	    ProjectToWindowRule.PROJECT,
     	    //TableScanRule.INSTANCE
     	    
@@ -150,8 +150,8 @@ public class SaberPlanner {
             JoinPushThroughJoinRule.LEFT, 
             JoinPushThroughJoinRule.RIGHT,
             JoinAssociateRule.INSTANCE,
-    	    JoinPushExpressionsRule.INSTANCE,
     	    JoinCommuteRule.INSTANCE,
+    	    JoinPushExpressionsRule.INSTANCE,
     	    //maybe implement JoinAddNotNullRule.INSTANCE
     	    JoinPushTransitivePredicatesRule.INSTANCE, //Planner rule that infers predicates from on a Join and creates Filter if those predicates can be pushed to its inputs.
     	    
@@ -177,10 +177,14 @@ public class SaberPlanner {
     	    //EnumerableRules.ENUMERABLE_VALUES_RULE //The VALUES clause creates an inline table with a given set of rows.
     												 //Streaming is disallowed. The set of rows never changes, and therefore 
     												 //a stream would never return any rows.*/
-            );
+            ));
     
     if (greedyJoinOrder) {
-    	//fix the greedy case
+    	VOLCANO_RULES.removeAll(ImmutableList.of(
+    			JoinPushThroughJoinRule.LEFT, 
+                JoinPushThroughJoinRule.RIGHT,
+                JoinAssociateRule.INSTANCE,
+        	    JoinCommuteRule.INSTANCE));
     }
     
     Program program =Programs.ofRules(VOLCANO_RULES);
@@ -202,22 +206,22 @@ public class SaberPlanner {
 
     // Create hep planner for optimizations.
     HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
-    hepProgramBuilder.addRuleClass(EnumerableJoinToLogicalJoinRule.class);
-    hepProgramBuilder.addRuleClass(EnumerableProjectToLogicalProjectRule.class);
-    hepProgramBuilder.addRuleClass(EnumerableFilterToLogicalFilterRule.class);
-    hepProgramBuilder.addRuleClass(EnumerableAggregateToLogicalAggregateRule.class);
-    hepProgramBuilder.addRuleClass(EnumerableWindowToLogicalWindowRule.class);
-    hepProgramBuilder.addRuleClass(EnumerableTableScanToLogicalTableScanRule.class);
-    hepProgramBuilder.addRuleClass(ProjectToWindowRule.class); 
-    hepProgramBuilder.addRuleClass(ProjectJoinTransposeRule.class);
-    hepProgramBuilder.addRuleClass(ProjectRemoveRule.class);
-    hepProgramBuilder.addRuleClass(ProjectTableScanRule.class);
-    hepProgramBuilder.addRuleClass(ProjectWindowTransposeRule.class);
-    hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
-    hepProgramBuilder.addRuleClass(AggregateProjectMergeRule.class);
-    hepProgramBuilder.addRuleClass(AggregateProjectPullUpConstantsRule.class);
-    hepProgramBuilder.addRuleClass(JoinToMultiJoinRule.class);
-    hepProgramBuilder.addRuleClass(LoptOptimizeJoinRule.class);
+    hepProgramBuilder.addRuleInstance(EnumerableJoinToLogicalJoinRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(EnumerableProjectToLogicalProjectRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(EnumerableFilterToLogicalFilterRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(EnumerableAggregateToLogicalAggregateRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(EnumerableTableScanToLogicalTableScanRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(EnumerableWindowToLogicalWindowRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(ProjectToWindowRule.INSTANCE); 
+    hepProgramBuilder.addRuleInstance(ProjectJoinTransposeRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(ProjectRemoveRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(ProjectTableScanRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(ProjectWindowTransposeRule.INSTANCE); 
+    hepProgramBuilder.addRuleInstance(ProjectMergeRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(AggregateProjectMergeRule.INSTANCE);
+    hepProgramBuilder.addRuleInstance(AggregateProjectPullUpConstantsRule.INSTANCE);
+    //hepProgramBuilder.addRuleInstance(JoinToMultiJoinRule.INSTANCE);
+    //hepProgramBuilder.addRuleInstance(LoptOptimizeJoinRule.INSTANCE);
        
     hepProgramBuilder.addMatchOrder(HepMatchOrder.BOTTOM_UP);
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
@@ -227,23 +231,7 @@ public class SaberPlanner {
     this.hepPlanner = new HepPlanner(hepProgramBuilder.build());
     
     /*The order in which the rules within a collection will be attempted is
-     arbitrary, so if more control is needed, use addRuleInstance instead.*/
-    this.hepPlanner.addRule(EnumerableJoinToLogicalJoinRule.INSTANCE);
-    this.hepPlanner.addRule(EnumerableProjectToLogicalProjectRule.INSTANCE);
-    this.hepPlanner.addRule(EnumerableFilterToLogicalFilterRule.INSTANCE);
-    this.hepPlanner.addRule(EnumerableAggregateToLogicalAggregateRule.INSTANCE);
-    this.hepPlanner.addRule(EnumerableTableScanToLogicalTableScanRule.INSTANCE);
-    this.hepPlanner.addRule(EnumerableWindowToLogicalWindowRule.INSTANCE);
-    this.hepPlanner.addRule(ProjectToWindowRule.INSTANCE); 
-    this.hepPlanner.addRule(ProjectJoinTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(ProjectRemoveRule.INSTANCE);
-    this.hepPlanner.addRule(ProjectTableScanRule.INSTANCE);
-    this.hepPlanner.addRule(ProjectWindowTransposeRule.INSTANCE); 
-    this.hepPlanner.addRule(ProjectMergeRule.INSTANCE);
-    this.hepPlanner.addRule(AggregateProjectMergeRule.INSTANCE);
-    this.hepPlanner.addRule(AggregateProjectPullUpConstantsRule.INSTANCE);
-    //this.hepPlanner.addRule(JoinToMultiJoinRule.INSTANCE);
-    //this.hepPlanner.addRule(LoptOptimizeJoinRule.INSTANCE); //Planner rule that implements the heuristic planner for determining optimal join orderings.
+     arbitrary, so if more control is needed, use addRuleInstance.*/
   }
 
   public RelNode hepOptimization(RelNode convertedNode) throws RelConversionException {	 	   

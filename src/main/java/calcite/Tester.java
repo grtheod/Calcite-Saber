@@ -68,7 +68,7 @@ public class Tester {
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
 				"select s.orders.productid  " 
-					    + "from  s.orders,s.products, s.customers " 
+					    + "from  s.orders,s.products,s.customers " 
 					    + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid " 
 					    + " and units>5 " 
 					    );
