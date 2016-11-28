@@ -86,7 +86,7 @@ public class StreamQueryPlanner {
 	    rootSchema.add("ps", new ReflectiveSchema(new Ps()));
 	    Statement statement = connection.createStatement();
 	    //ResultSet resultSet = statement.executeQuery("select *\n" + "from \"os\".\"orders\"");
-	    QueryPlanner queryPlanner = new QueryPlanner(rootSchema);
+	    StreamQueryPlanner queryPlanner = new StreamQueryPlanner(rootSchema);
 	    RelNode loginalPlan = queryPlanner.getLogicalPlan(""
 	    		+ "select os.orders.productid, description, sum(units)*0.3 "
 	    		+ "from os.orders, ps.products "

@@ -1,20 +1,29 @@
 package calcite.planner;
 
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptPlanner.Executor;
+import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepMatchOrder;
 import org.apache.calcite.plan.hep.HepPlanner;
+import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttleImpl;
@@ -23,11 +32,15 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
+import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.AggregateProjectPullUpConstantsRule;
+import org.apache.calcite.rel.rules.AggregateReduceFunctionsRule;
 import org.apache.calcite.rel.rules.AggregateRemoveRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
 import org.apache.calcite.rel.rules.FilterJoinRule;
@@ -35,9 +48,11 @@ import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.JoinAssociateRule;
+import org.apache.calcite.rel.rules.JoinCommuteRule;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
+import org.apache.calcite.rel.rules.JoinPushTransitivePredicatesRule;
 import org.apache.calcite.rel.rules.JoinToMultiJoinRule;
 import org.apache.calcite.rel.rules.LoptJoinTree;
 import org.apache.calcite.rel.rules.LoptOptimizeJoinRule;
@@ -46,6 +61,7 @@ import org.apache.calcite.rel.rules.MultiJoinOptimizeBushyRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
+import org.apache.calcite.rel.rules.ProjectMultiJoinMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
@@ -53,21 +69,37 @@ import org.apache.calcite.rel.rules.ProjectWindowTransposeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.rel.rules.TableScanRule;
+import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
+import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelConversionException;
+import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.ValidationException;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import calcite.cost.SaberCostBase;
+import calcite.cost.SaberRelOptCostFactory;
+import calcite.planner.logical.EnumerableAggregateToLogicalAggregateRule;
+import calcite.planner.logical.EnumerableFilterToLogicalFilterRule;
+import calcite.planner.logical.EnumerableJoinToLogicalJoinRule;
+import calcite.planner.logical.EnumerableProjectToLogicalProjectRule;
+import calcite.planner.logical.EnumerableTableScanToLogicalTableScanRule;
+import calcite.planner.logical.EnumerableWindowToLogicalWindowRule;
+import calcite.planner.logical.FilterPushThroughFilter;
 import calcite.planner.physical.SaberLogicalConvention;
 
 /**
@@ -80,24 +112,24 @@ public class QueryPlanner {
   public static final int SABER_REL_CONVERSION_RULES = 1;
 
   private final Planner planner;
-  private final HepPlanner hepPlanner;
+  private final Statement statement;
+  private final SaberRelOptCostFactory saberCostFactory;
+  private final boolean bushy;
+  private final FrameworkConfig config;
 
-  public QueryPlanner(SchemaPlus schema) {
+  public QueryPlanner(SchemaPlus schema, Statement statement, boolean bushyJoin) {
+	this.statement = statement;
+	this.bushy = bushyJoin;
+	
     final List<RelTraitDef> traitDefs = new ArrayList<RelTraitDef>();
 
     traitDefs.add(ConventionTraitDef.INSTANCE);
     traitDefs.add(RelCollationTraitDef.INSTANCE);
-
-    Program program =Programs.ofRules(
-    	    /*Enumerable Rules*/
-    		EnumerableRules.ENUMERABLE_FILTER_RULE,
-    		EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-    		EnumerableRules.ENUMERABLE_PROJECT_RULE,
-    		EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
-    		EnumerableRules.ENUMERABLE_JOIN_RULE,
-    		EnumerableRules.ENUMERABLE_WINDOW_RULE
-    		);
-    FrameworkConfig config = Frameworks.newConfigBuilder()
+     
+    saberCostFactory = new SaberCostBase.SaberCostFactory(); //custom factory with rates
+    ImmutableList<RelOptRule> preJoinRules = SaberRuleSets.PRE_JOIN_ORDERING_RULES;
+    Program program = Programs.ofRules(preJoinRules);
+    config = Frameworks.newConfigBuilder()
         .parserConfig(SqlParser.configBuilder()
             .setLex(Lex.MYSQL)
             .build())
@@ -106,166 +138,13 @@ public class QueryPlanner {
         .traitDefs(traitDefs)
         .context(Contexts.EMPTY_CONTEXT)
         .ruleSets(SaberRuleSets.getRuleSets())
-        .costFactory(null) //If null, use the default cost factory for that planner.
+        .costFactory(saberCostFactory) //If null, use the default cost factory for that planner.
         .typeSystem(SaberRelDataTypeSystem.SABER_REL_DATATYPE_SYSTEM)
         .programs(program)
         .build();
-    this.planner = Frameworks.getPlanner(config);
-
-    // Create hep planner for optimizations.
-    HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
-    hepProgramBuilder.addRuleClass(ReduceExpressionsRule.class);
-    //hepProgramBuilder.addRuleClass(PruneEmptyRules.class);
-    hepProgramBuilder.addRuleClass(FilterTableScanRule.class);
-    hepProgramBuilder.addRuleClass(FilterMergeRule.class);
-    hepProgramBuilder.addRuleClass(FilterProjectTransposeRule.class);
-    hepProgramBuilder.addRuleClass(FilterAggregateTransposeRule.class);
-    hepProgramBuilder.addRuleClass(FilterJoinRule.class);
-    hepProgramBuilder.addRuleClass(JoinProjectTransposeRule.class);
-    hepProgramBuilder.addRuleClass(ProjectToWindowRule.class);
-    hepProgramBuilder.addRuleClass(ProjectJoinTransposeRule.class);
-    hepProgramBuilder.addRuleClass(ProjectTableScanRule.class);
-    hepProgramBuilder.addRuleClass(ProjectFilterTransposeRule.class);
-    hepProgramBuilder.addRuleClass(ProjectRemoveRule.class);
-    hepProgramBuilder.addRuleClass(AggregateRemoveRule.class);
-    hepProgramBuilder.addRuleClass(AggregateJoinTransposeRule.class);
-    hepProgramBuilder.addRuleClass(AggregateProjectMergeRule.class);
-    hepProgramBuilder.addRuleClass(AggregateProjectPullUpConstantsRule.class);
-    hepProgramBuilder.addRuleClass(TableScanRule.class);
-    hepProgramBuilder.addRuleClass(ProjectWindowTransposeRule.class);
-    hepProgramBuilder.addRuleClass(LoptOptimizeJoinRule.class);
-    hepProgramBuilder.addRuleClass(MultiJoinOptimizeBushyRule.class);
-    hepProgramBuilder.addRuleClass(JoinPushThroughJoinRule.class);
-    hepProgramBuilder.addRuleClass(JoinToMultiJoinRule.class);
-    hepProgramBuilder.addRuleClass(ProjectMergeRule.class);
-    hepProgramBuilder.addRuleClass(JoinPushExpressionsRule.class);
-    
-
-    //hepProgramBuilder.addMatchOrder(HepMatchOrder.ARBITRARY);
-    /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
-     final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
-      	with the option to keep the graph a tree(noDAG=true) or allow DAG(noDAG=false).
-     */
-
-    this.hepPlanner = new HepPlanner(hepProgramBuilder.build());
-    
-    /*The order in which the rules within a collection will be attempted is
-     arbitrary, so if more control is needed, use addRuleInstance instead.*/
-
-    //starting rules      
-    /*Unlike select operators, window operators should be pushed up*/
-    this.hepPlanner.addRule(ProjectToWindowRule.PROJECT);
-    //this.hepPlanner.addRule(TableScanRule.INSTANCE);
-    
-    // push and merge filter rules
-    this.hepPlanner.addRule(FilterAggregateTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(FilterProjectTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(FilterMergeRule.INSTANCE);
-    this.hepPlanner.addRule(FilterJoinRule.FILTER_ON_JOIN);
-    this.hepPlanner.addRule(FilterJoinRule.JOIN); /*push filter into the children of a join*/
-    this.hepPlanner.addRule(FilterTableScanRule.INSTANCE);
-    // push and merge projection rules
-    /*check the effectiveness of pushing down projections*/
-    this.hepPlanner.addRule(ProjectRemoveRule.INSTANCE);
-    this.hepPlanner.addRule(ProjectJoinTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(JoinProjectTransposeRule.BOTH_PROJECT);
-    //this.hepPlanner.addRule(ProjectFilterTransposeRule.INSTANCE); /*it is better to use filter first an then project*/
-    this.hepPlanner.addRule(ProjectTableScanRule.INSTANCE);
-    this.hepPlanner.addRule(ProjectWindowTransposeRule.INSTANCE);
-    this.hepPlanner.addRule(ProjectMergeRule.INSTANCE);
-    //aggregate rules
-    this.hepPlanner.addRule(AggregateRemoveRule.INSTANCE);
-    this.hepPlanner.addRule(AggregateJoinTransposeRule.EXTENDED);
-    this.hepPlanner.addRule(AggregateProjectMergeRule.INSTANCE);
-    this.hepPlanner.addRule(AggregateProjectPullUpConstantsRule.INSTANCE);
-    //join rules    
-    /*A simple trick is to consider a window size equal to stream cardinality.
-     * For tuple-based windows, the window size is equal to the number of tuples.
-     * For time-based windows, the window size is equal to the (input_rate*time_of_window).*/
-    //this.hepPlanner.addRule(JoinToMultiJoinRule.INSTANCE); 
-    //this.hepPlanner.addRule(LoptOptimizeJoinRule.INSTANCE); 
-    //this.hepPlanner.addRule(MultiJoinOptimizeBushyRule.INSTANCE);
-    //this.hepPlanner.addRule(JoinPushThroughJoinRule.RIGHT);
-    this.hepPlanner.addRule(JoinPushThroughJoinRule.LEFT); /*choose between right and left*/
-    this.hepPlanner.addRule(JoinPushExpressionsRule.INSTANCE);
-    // simplify expressions rules
-    //this.hepPlanner.addRule(ReduceExpressionsRule.CALC_INSTANCE);
-    this.hepPlanner.addRule(ReduceExpressionsRule.FILTER_INSTANCE);
-    this.hepPlanner.addRule(ReduceExpressionsRule.PROJECT_INSTANCE);
-    // prune empty results rules   
-    this.hepPlanner.addRule(PruneEmptyRules.FILTER_INSTANCE);
-    this.hepPlanner.addRule(PruneEmptyRules.PROJECT_INSTANCE);
-    this.hepPlanner.addRule(PruneEmptyRules.AGGREGATE_INSTANCE);
-    this.hepPlanner.addRule(PruneEmptyRules.JOIN_LEFT_INSTANCE);    
-    this.hepPlanner.addRule(PruneEmptyRules.JOIN_RIGHT_INSTANCE);
-    //JoinAssociateRule.INSTANCE,
-    //AggregateExpandDistinctAggregatesRule.INSTANCE,
-    //AggregateReduceFunctionsRule.INSTANCE,
-    //this.hepPlanner.addRule(JoinToSaberJoinRule.INSTANCE);
-
-    
+    this.planner = Frameworks.getPlanner(config);    
   }
-
-  private RelNode validateAndConvert(SqlNode sqlNode) throws ValidationException, RelConversionException {
-    SqlNode validated = validateNode(sqlNode);
-    RelNode relNode = convertToRelNode(validated);
-
-    // Drill does pre-processing too. We can do pre processing here if needed.
-    // Drill also preserve the validated type of the sql query for later use. But current Calcite
-    // API doesn't provide a way to get validated type.
-
-    return convertToSaberRel(relNode);
-  }
-
-  private RelNode convertToSaberRel(RelNode relNode) throws RelConversionException {
-    RelTraitSet traitSet = relNode.getTraitSet();
-    traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
-    return planner.transform(SABER_REL_CONVERSION_RULES, traitSet.plus(SaberLogicalConvention.INSTANCE), relNode);
-  }
-
-  public RelNode convertToRelNode(SqlNode sqlNode) throws RelConversionException {
-	  
-	final RelNode convertedNode = planner.convert(sqlNode);    
-    
-    final RelMetadataProvider provider = convertedNode.getCluster().getMetadataProvider();
-
-    // Register RelMetadataProvider with HepPlanner.
-    final List<RelMetadataProvider> list = Lists.newArrayList(provider);
-    hepPlanner.registerMetadataProviders(list);
-    final RelMetadataProvider cachingMetaDataProvider = new CachingRelMetadataProvider(ChainedRelMetadataProvider.of(list), hepPlanner);
-    convertedNode.accept(new MetaDataProviderModifier(cachingMetaDataProvider));
-    
-    /*
-     * Maybe change the above two lines of code with :
-     * RelMetadataProvider plannerChain = ChainedRelMetadataProvider.of(list);
-     * convertedNode.getCluster().setMetadataProvider(plannerChain);
-     */
-    /*
-    List<RelMetadataProvider> list = Lists.newArrayList();
-    list.add(DefaultRelMetadataProvider.INSTANCE);
-    hepPlanner.registerMetadataProviders(list);
-    RelMetadataProvider plannerChain =
-        ChainedRelMetadataProvider.of(list);
-    convertedNode.getCluster().setMetadataProvider(plannerChain);
-    */
-    
-    System.out.println("Applying rules...");
-    hepPlanner.setRoot(convertedNode);
-    RelNode rel = hepPlanner.findBestExp();
-    
-
-    // I think this line reset the metadata provider instances changed for hep planner execution.
-    rel.accept(new MetaDataProviderModifier(provider));
-    
-    RelTraitSet traitSet = planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);	
-    rel = planner.transform(0, traitSet, rel);
-    return rel;
-  }
-
-  private RelNode applyStreamRules(RelNode relNode) throws RelConversionException {
-    return planner.transform(STREAM_RULES, relNode.getTraitSet(), relNode);
-  }
-
+     
   private SqlNode validateNode(SqlNode sqlNode) throws ValidationException {
     SqlNode validatedSqlNode = planner.validate(sqlNode);
 
@@ -275,43 +154,175 @@ public class QueryPlanner {
   }
 
 
-  public RelNode getLogicalPlan(String query) throws ValidationException, RelConversionException {
-    SqlNode sqlNode;
-
+  public RelNode getLogicalPlan(String query) throws ValidationException, RelConversionException, SQLException {
+    // 1. Gen Calcite Plan
+	SqlNode sqlNode;
     try {
       sqlNode = planner.parse(query);
     } catch (SqlParseException e) {
       throw new RuntimeException("Query parsing error.", e);
     }
 
-    SqlNode validatedSqlNode = planner.validate(sqlNode);
-      
-    RelNode beforeplan= convertToRelNode(validatedSqlNode);   
-   
-    //use Volcano Planner to conver nodes
-    //RelTraitSet traitSet = beforeplan.getTraitSet();
-    //traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
-    //beforeplan = planner.transform(0, traitSet, beforeplan);       
+    SqlNode validatedSqlNode = validateNode(sqlNode);
+    RelNode calciteGenPlan = planner.convert(validatedSqlNode); 
+          
+    //RelFieldTrimmer fieldTrimmer = new RelFieldTrimmer(SqlValidatorUtil.newValidator(SqlStdOperatorTable.instance(), Prepare.CatalogReader , SaberRelDataTypeSystem.SABER_REL_DATATYPE_SYSTEM));
+    //fieldTrimmer.trim(calciteGenPlan);
     
-    //compute cost
-    final RelMetadataQuery mq = RelMetadataQuery.instance();
-    //RelMetadataQuery.THREAD_PROVIDERS.set( JaninoRelMetadataProvider.of(new MyRelMetadataProvider()));
-    /*RelOptCost relCost= mq.getCumulativeCost(beforeplan); //beforeplan.computeSelfCost( hepPlanner,mq);	 	   
-    System.out.println("Plan cost is : " + relCost.toString());
+    // Create and set MD provider    
+    final RelMetadataProvider provider = calciteGenPlan.getCluster().getMetadataProvider();
+    RelMetadataQuery.THREAD_PROVIDERS.set(JaninoRelMetadataProvider.of(provider));
+    
+    // Create executor
+    DataContext dataContext =
+            Schemas.createDataContext(statement.getConnection());
+    final Executor executor = config.getExecutor();//new RexExecutorImpl(dataContext);
+    
+    // 2. Apply pre-join order optimizations
+    //ImmutableList<RelOptRule> preJoinRules = SaberRuleSets.PRE_JOIN_ORDERING_RULES;
+    //RelNode calcitePreCboPlan = volcanoPlan(calciteGenPlan, preJoinRules.toArray(new RelOptRule[preJoinRules.size()]));
+    RelTraitSet traitSet = planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);	
+    RelNode calcitePreCboPlan = planner.transform(0, traitSet, calciteGenPlan);   
+    ImmutableList<RelOptRule> convertToLogicalRules = SaberRuleSets.CONVERT_TO_LOGICAL_RULES;
+    calcitePreCboPlan = hepPlan(calcitePreCboPlan, true, provider, executor, HepMatchOrder.BOTTOM_UP,
+    		convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]));     
+    calcitePreCboPlan.accept(new MetaDataProviderModifier(provider)); // I think this line reset the metadata provider instances changed for hep planner execution.
 
-    System.out.println("Row count : " + mq.getRowCount(beforeplan));*/
-    System.out.println("Returning plan...");
-    return beforeplan;    
-    //return planner.rel(validatedSqlNode).project();
+    // 3. Apply join order optimizations: reordering MST algorithm       
+    RelNode calciteOptimizedPlan = null;
+    try {
+        List<RelMetadataProvider> list = Lists.newArrayList();
+        list.add(provider);
+
+        HepProgramBuilder hepPgmBldr = new HepProgramBuilder().addMatchOrder(HepMatchOrder.BOTTOM_UP);        
+        hepPgmBldr.addRuleInstance(JoinToMultiJoinRule.INSTANCE);
+        if (bushy)
+        	hepPgmBldr.addRuleInstance(MultiJoinOptimizeBushyRule.INSTANCE);
+        else
+        	hepPgmBldr.addRuleInstance(LoptOptimizeJoinRule.INSTANCE);
+        
+        HepProgram hepPgm = hepPgmBldr.build();
+        HepPlanner hepPlanner = new HepPlanner(hepPgm);
+
+        hepPlanner.registerMetadataProviders(list);
+        RelMetadataProvider chainedProvider = ChainedRelMetadataProvider.of(list);
+        calcitePreCboPlan.getCluster().setMetadataProvider(new CachingRelMetadataProvider(chainedProvider, hepPlanner));
+
+        RelNode rootRel = calcitePreCboPlan;
+        hepPlanner.setRoot(rootRel);
+
+        calciteOptimizedPlan = hepPlanner.findBestExp();
+        calciteOptimizedPlan.accept(new MetaDataProviderModifier(provider));
+    }
+    catch (Exception e) {
+    	System.err.println("Missing column stats (see previous messages), skipping join reordering in CBO");
+		//System.err.println("Exception:" + e.getMessage());
+		//System.exit(1);
+    }
+
+    // 4. Run other optimizations that do not need stats
+    ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES;
+    try {
+        List<RelMetadataProvider> list = Lists.newArrayList();
+        list.add(provider);
+
+        HepProgramBuilder hepPgmBldr = new HepProgramBuilder().addMatchOrder(HepMatchOrder.BOTTOM_UP);        
+        for (RelOptRule r : afterJoinRules)
+        	hepPgmBldr.addRuleInstance(r);
+        
+        HepProgram hepPgm = hepPgmBldr.build();
+        HepPlanner hepPlanner = new HepPlanner(hepPgm);
+
+        hepPlanner.registerMetadataProviders(list);
+        RelMetadataProvider chainedProvider = ChainedRelMetadataProvider.of(list);
+        calciteOptimizedPlan.getCluster().setMetadataProvider(new CachingRelMetadataProvider(chainedProvider, hepPlanner));
+
+        RelNode rootRel = calciteOptimizedPlan;
+        hepPlanner.setRoot(rootRel);
+
+        calciteOptimizedPlan = hepPlanner.findBestExp();
+        calciteOptimizedPlan.accept(new MetaDataProviderModifier(provider));
+    }
+    catch (Exception e) {
+		System.err.println("Exception:" + e.getMessage());
+		//System.exit(1);
+    }    
+    
+    // 5. Run rules to aid in translation from Calcite tree to Saber tree => to be implemented
+    
+    RelNode finalPlan = calciteOptimizedPlan;
+    return finalPlan;    
   }  
-  
   
   public SqlNode parseQuery(String sql) throws Exception {
       SqlParser parser = SqlParser.create(sql);
       return parser.parseQuery();
   }
   
-  
+
+  /**
+   * Run the HEP Planner with the given rule set.
+   *
+   * @param basePlan
+   * @param followPlanChanges
+   * @param mdProvider
+   * @param executorProvider
+   * @param rules
+   * @return optimized RelNode
+   */
+  private RelNode hepPlan(RelNode basePlan, boolean followPlanChanges,
+      RelMetadataProvider mdProvider, Executor executorProvider, RelOptRule... rules) {
+	return hepPlan(basePlan, followPlanChanges, mdProvider, executorProvider,
+            HepMatchOrder.TOP_DOWN, rules);
+  }
+
+  /**
+   * Run the HEP Planner with the given rule set.
+   *
+   * @param basePlan
+   * @param followPlanChanges
+   * @param mdProvider
+   * @param executorProvider
+   * @param order
+   * @param rules
+   * @return optimized RelNode
+   */
+  private RelNode hepPlan(RelNode basePlan, boolean followPlanChanges,
+	        RelMetadataProvider mdProvider, Executor executorProvider, HepMatchOrder order,
+	        RelOptRule... rules) {
+
+	  RelNode optimizedRelNode = basePlan;
+	  HepProgramBuilder programBuilder = new HepProgramBuilder();
+	  if (followPlanChanges) {
+	    programBuilder.addMatchOrder(order);
+	    programBuilder = programBuilder.addRuleCollection(ImmutableList.copyOf(rules));
+	  } else {
+	    // TODO: Should this be also TOP_DOWN?
+	    for (RelOptRule r : rules)
+	      programBuilder.addRuleInstance(r);
+	  }
+	
+	  // Create planner and copy context
+	  HepPlanner planner = new HepPlanner(programBuilder.build(),
+	          basePlan.getCluster().getPlanner().getContext());
+	
+	  List<RelMetadataProvider> list = Lists.newArrayList();
+	  list.add(mdProvider);
+	  planner.registerMetadataProviders(list);
+	  RelMetadataProvider chainedProvider = ChainedRelMetadataProvider.of(list);
+	  basePlan.getCluster().setMetadataProvider(
+	      new CachingRelMetadataProvider(chainedProvider, planner));
+	
+	  if (executorProvider != null) {
+	    basePlan.getCluster().getPlanner().setExecutor(executorProvider);
+	  }
+	
+	  planner.setRoot(basePlan);
+	  optimizedRelNode = planner.findBestExp();
+	
+	  return optimizedRelNode;
+  }  
+    
   // TODO: This is from Drill. Not sure what it does.
   public static class MetaDataProviderModifier extends RelShuttleImpl {
     private final RelMetadataProvider metadataProvider;

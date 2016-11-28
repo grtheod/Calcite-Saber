@@ -11,6 +11,7 @@ import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepMatchOrder;
@@ -25,6 +26,7 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
+import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
@@ -145,7 +147,7 @@ public class SaberPlanner {
     	     * For tuple-based windows, the window size is equal to the number of tuples.
     	     * For time-based windows, the window size is equal to the (input_rate*time_of_window).*/
     	    //JoinToMultiJoinRule.INSTANCE ,
-    	    //LoptOptimizeJoinRule.INSTANCE ,
+    	    //LoptOptimizeJoinRule.INSTANCE , //is only capable of producing left-deep joins
     	    //MultiJoinOptimizeBushyRule.INSTANCE,
             JoinPushThroughJoinRule.LEFT, 
             JoinPushThroughJoinRule.RIGHT,
@@ -185,7 +187,11 @@ public class SaberPlanner {
                 JoinPushThroughJoinRule.RIGHT,
                 JoinAssociateRule.INSTANCE,
         	    JoinCommuteRule.INSTANCE));
+    	VOLCANO_RULES.addAll(ImmutableList.of(
+    			JoinToMultiJoinRule.INSTANCE,
+    			LoptOptimizeJoinRule.INSTANCE));
     }
+
     
     Program program =Programs.ofRules(VOLCANO_RULES);
     SaberRelOptCostFactory saberCostFactory = new SaberCostBase.SaberCostFactory(); //custom factory with rates
@@ -221,7 +227,7 @@ public class SaberPlanner {
     hepProgramBuilder.addRuleInstance(AggregateProjectMergeRule.INSTANCE);
     hepProgramBuilder.addRuleInstance(AggregateProjectPullUpConstantsRule.INSTANCE);
     //hepProgramBuilder.addRuleInstance(JoinToMultiJoinRule.INSTANCE);
-    //hepProgramBuilder.addRuleInstance(LoptOptimizeJoinRule.INSTANCE);
+    //hepProgramBuilder.addRuleInstance(LoptOptimizeJoinRule.INSTANCE); //is only capable of producing left-deep joins
        
     hepProgramBuilder.addMatchOrder(HepMatchOrder.BOTTOM_UP);
     /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
@@ -237,17 +243,18 @@ public class SaberPlanner {
   public RelNode hepOptimization(RelNode convertedNode) throws RelConversionException {	 	   
     
     final RelMetadataProvider provider = convertedNode.getCluster().getMetadataProvider();
-
+    RelMetadataQuery.THREAD_PROVIDERS.set(JaninoRelMetadataProvider.of(provider));
+    
     // Register RelMetadataProvider with HepPlanner.
     final List<RelMetadataProvider> list = Lists.newArrayList(provider);
     hepPlanner.registerMetadataProviders(list);
     final RelMetadataProvider cachingMetaDataProvider = new CachingRelMetadataProvider(ChainedRelMetadataProvider.of(list), hepPlanner);
     convertedNode.accept(new MetaDataProviderModifier(cachingMetaDataProvider));
-    
+
     /*
      * Maybe change the above two lines of code with :
-     * RelMetadataProvider plannerChain = ChainedRelMetadataProvider.of(list);
-     * convertedNode.getCluster().setMetadataProvider(plannerChain);
+     * RelMetadataProvider chainedProvider = ChainedRelMetadataProvider.of(list);
+     * convertedNode.getCluster().setMetadataProvider(new CachingRelMetadataProvider(chainedProvider, hepPlanner));
      */
     /*
     List<RelMetadataProvider> list = Lists.newArrayList();

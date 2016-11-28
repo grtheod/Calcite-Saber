@@ -14,6 +14,7 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlExplainLevel;
 
+import calcite.planner.QueryPlanner;
 import calcite.planner.SaberPlanner;
 import calcite.planner.physical.PhysicalRuleConverter;
 import calcite.planner.physical.SystemConfig;
@@ -46,12 +47,11 @@ public class Tester {
 						.build();
 		
 		Statement statement = connection.createStatement();
-		/*SaberPlanner is a combination of both Volcano and heuristic planner.*/
-		/*SaberPlanner's constructor needs (Schema, greedyJoinOrder, bushy).
-		 * @greedyJoinOrder is a boolean that defines if the Join Reorder will be greedy or not
+		/*QueryPlanner is a combination of both Volcano and heuristic planner.*/
+		/*QueryPlanner's constructor needs (Schema, Statement, bushy).
 		 * @bushy is a boolean that defines if the want a bushy Join Reorder or not 
 		 * */
-		SaberPlanner queryPlanner = new SaberPlanner(rootSchema, false, false);
+		QueryPlanner queryPlanner = new QueryPlanner(rootSchema, statement, false);
 		
 		/* Until it is fixed, when joining two tables and then using group by, the attributes of group by predicate should be 
 		 * from the first table. For example:
@@ -67,11 +67,11 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-				"select s.orders.productid  " 
-					    + "from  s.orders,s.products,s.customers " 
-					    + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid " 
-					    + " and units>5 " 
-					    );
+			     "select *  "
+			    	     + "from  s.products join s.orders  "
+			    	     + "on s.orders.productid = s.products.productid  "
+			    	     + " where units>10 and description < 20 "
+			    	     );
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
 			
