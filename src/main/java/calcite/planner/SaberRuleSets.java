@@ -51,13 +51,13 @@ public class SaberRuleSets {
 	public static final ImmutableList<RelOptRule> PRE_JOIN_ORDERING_RULES =
 			ImmutableList.of(				
 				ProjectToWindowRule.PROJECT,
-			    
-				//1. Distinct aggregate rewrite
-			    // Run this optimization early, since it is expanding the operator pipeline.
+			   
+		                //1. Distinct aggregate rewrite
+			        // Run this optimization early, since it is expanding the operator pipeline.
 				AggregateExpandDistinctAggregatesRule.INSTANCE,
 				
 				// 2. Run exhaustive PPD, add not null filters, transitive inference,
-			    // constant propagation, constant folding
+		                // constant propagation, constant folding
 				FilterAggregateTransposeRule.INSTANCE,
 				FilterProjectTransposeRule.INSTANCE,
 				//FilterMergeRule.INSTANCE,
@@ -74,12 +74,12 @@ public class SaberRuleSets {
 				AggregateReduceFunctionsRule.INSTANCE, 
 				AggregateRemoveRule.INSTANCE,				
 				
-			    // 3. Merge, remove and reduce Project if possible
+		                // 3. Merge, remove and reduce Project if possible
 				ProjectRemoveRule.INSTANCE,
 				ProjectWindowTransposeRule.INSTANCE, 
 				ProjectMergeRule.INSTANCE,
-				//maybe implement ProjectFilterPullUpConstantsRule.INSTANCE												    						
-	    	    ProjectTableScanRule.INSTANCE,
+				//maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
+		                ProjectTableScanRule.INSTANCE,
 				
 			   	// 4. Prune empty result rules				
 				PruneEmptyRules.FILTER_INSTANCE,
@@ -103,10 +103,10 @@ public class SaberRuleSets {
 	//These rules can only be used in Volcano Planner
 	public static final ImmutableList<RelOptRule> EXHAUSTIVE_JOIN_ORDERING_RULES =
 		ImmutableList.of(
-			    JoinPushThroughJoinRule.LEFT, 
-		        JoinPushThroughJoinRule.RIGHT,
-		        JoinAssociateRule.INSTANCE,
-		    	JoinCommuteRule.INSTANCE,
+		                JoinPushThroughJoinRule.LEFT,
+		                JoinPushThroughJoinRule.RIGHT,
+		                JoinAssociateRule.INSTANCE,
+		                JoinCommuteRule.INSTANCE,
 				EnumerableRules.ENUMERABLE_FILTER_RULE,
 				EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
 				EnumerableRules.ENUMERABLE_PROJECT_RULE,
@@ -118,20 +118,20 @@ public class SaberRuleSets {
 	//These rules are only capable of producing left-deep joins
 	public static final ImmutableList<RelOptRule> HEURISTIC_JOIN_ORDERING_RULES =
 		ImmutableList.of(
-	    	    JoinToMultiJoinRule.INSTANCE ,
-	    	    LoptOptimizeJoinRule.INSTANCE
+	    	                JoinToMultiJoinRule.INSTANCE ,
+	    	                LoptOptimizeJoinRule.INSTANCE
 				);
 	
 	//These rules produce bushy joins
 	public static final ImmutableList<RelOptRule> HEURISTIC_BUSHY_JOIN_ORDERING_RULES =
 		ImmutableList.of(
-		   	    JoinToMultiJoinRule.INSTANCE ,
-		   	    MultiJoinOptimizeBushyRule.INSTANCE
+		   	        JoinToMultiJoinRule.INSTANCE ,
+		   	        MultiJoinOptimizeBushyRule.INSTANCE
 				);		
 
 	public static final ImmutableList<RelOptRule> AFTER_JOIN_RULES =
 		ImmutableList.of(
-			// 1. Run other optimizations that do not need stats
+			        // 1. Run other optimizations that do not need stats
 				JoinPushExpressionsRule.INSTANCE,
 				ProjectRemoveRule.INSTANCE,
 				ProjectMergeRule.INSTANCE,
@@ -139,11 +139,11 @@ public class SaberRuleSets {
 				ProjectJoinTransposeRule.INSTANCE,
 				//ProjectJoinRemoveRule.INSTANCE,
 				//JoinCommuteRule.INSTANCE,
-							
-			// 2. Run aggregate-join transpose (cost based)
+			        
+		                // 2. Run aggregate-join transpose (cost based)
 				AggregateJoinTransposeRule.INSTANCE,
 
-			// 3. Run rule to fix windowing issue when it is done over aggregation columns
+		                // 3. Run rule to fix windowing issue when it is done over aggregation columns
 				ProjectToWindowRule.PROJECT,
 				ProjectWindowTransposeRule.INSTANCE
 				);		
@@ -152,10 +152,10 @@ public class SaberRuleSets {
 		ImmutableList.of(
 				EnumerableJoinToLogicalJoinRule.INSTANCE,
 				EnumerableProjectToLogicalProjectRule.INSTANCE,
-	    		EnumerableFilterToLogicalFilterRule.INSTANCE,
-	    		EnumerableAggregateToLogicalAggregateRule.INSTANCE,
-	    		EnumerableTableScanToLogicalTableScanRule.INSTANCE,
-	    		EnumerableWindowToLogicalWindowRule.INSTANCE
+	    		        EnumerableFilterToLogicalFilterRule.INSTANCE,
+	    		        EnumerableAggregateToLogicalAggregateRule.INSTANCE,
+	    		        EnumerableTableScanToLogicalTableScanRule.INSTANCE,
+	    		        EnumerableWindowToLogicalWindowRule.INSTANCE
 				);	
 	
 	/**
@@ -171,7 +171,7 @@ public class SaberRuleSets {
 	   * Calcite planner takes an array of RuleSet and we can refer to them by index to activate
 	   * each rule set for transforming the query plan based on different criteria.
 	   */
-		Programs.ofRules(AFTER_JOIN_RULES);
+	  Programs.ofRules(AFTER_JOIN_RULES);
 	  return new RuleSet[]{new SaberRuleSet(StreamRules.RULES), new SaberRuleSet(ImmutableSet.<RelOptRule>builder().addAll(StreamRules.RULES).addAll(calciteToSaberConversionRules).build())};
 	}
 
