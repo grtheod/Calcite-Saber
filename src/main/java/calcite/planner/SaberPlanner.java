@@ -17,6 +17,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepMatchOrder;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
+import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
@@ -62,6 +63,7 @@ import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -80,13 +82,20 @@ import com.google.common.collect.Lists;
 
 import calcite.cost.SaberCostBase;
 import calcite.cost.SaberRelOptCostFactory;
-import calcite.planner.logical.EnumerableAggregateToLogicalAggregateRule;
-import calcite.planner.logical.EnumerableFilterToLogicalFilterRule;
-import calcite.planner.logical.EnumerableJoinToLogicalJoinRule;
-import calcite.planner.logical.EnumerableProjectToLogicalProjectRule;
-import calcite.planner.logical.EnumerableTableScanToLogicalTableScanRule;
-import calcite.planner.logical.EnumerableWindowToLogicalWindowRule;
-import calcite.planner.logical.FilterPushThroughFilter;
+import calcite.planner.logical.SaberRel;
+import calcite.planner.logical.rules.EnumerableAggregateToLogicalAggregateRule;
+import calcite.planner.logical.rules.EnumerableFilterToLogicalFilterRule;
+import calcite.planner.logical.rules.EnumerableJoinToLogicalJoinRule;
+import calcite.planner.logical.rules.EnumerableProjectToLogicalProjectRule;
+import calcite.planner.logical.rules.EnumerableTableScanToLogicalTableScanRule;
+import calcite.planner.logical.rules.EnumerableWindowToLogicalWindowRule;
+import calcite.planner.logical.rules.FilterPushThroughFilter;
+import calcite.planner.logical.rules.SaberLogicalAggregateRule;
+import calcite.planner.logical.rules.SaberLogicalFilterRule;
+import calcite.planner.logical.rules.SaberLogicalJoinRule;
+import calcite.planner.logical.rules.SaberLogicalProjectRule;
+import calcite.planner.logical.rules.SaberLogicalTableScanRule;
+import calcite.planner.logical.rules.SaberLogicalWindowRule;
 import calcite.planner.physical.SaberLogicalConvention;
 
 /**
@@ -99,88 +108,26 @@ public class SaberPlanner {
   public static final int SABER_REL_CONVERSION_RULES = 1;
 
   private final Planner planner;
-  private final HepPlanner hepPlanner;
-
-  public SaberPlanner(SchemaPlus schema, boolean greedyJoinOrder, boolean bushyJoin) {
+  private final boolean greedyJoinOrder;
+  private final boolean useRatesCostModel;
+  
+  public SaberPlanner(SchemaPlus schema, boolean greedyJoinOrder, boolean useRatesCostModel) {
+	this.greedyJoinOrder = greedyJoinOrder;
+	this.useRatesCostModel = useRatesCostModel;	
     final List<RelTraitDef> traitDefs = new ArrayList<RelTraitDef>();
 
     traitDefs.add(ConventionTraitDef.INSTANCE);
     traitDefs.add(RelCollationTraitDef.INSTANCE);
     
-    List<RelOptRule> VOLCANO_RULES = new ArrayList<RelOptRule>(Arrays.asList(    		
-    	    ProjectToWindowRule.PROJECT,
-    	    //TableScanRule.INSTANCE
+    List<RelOptRule> VOLCANO_RULES = new ArrayList<RelOptRule>();
+    		//Arrays.asList(    		    	    
     	    
-    	    /*Unlike select operators, window operators should be pushed up*/
-    	    
-    	    // push and merge filter rules
-    	    FilterAggregateTransposeRule.INSTANCE,
-    	    FilterProjectTransposeRule.INSTANCE,
-    	    //FilterMergeRule.INSTANCE,
-    	    FilterJoinRule.FILTER_ON_JOIN,
-    	    FilterJoinRule.JOIN, /*push filter into the children of a join*/
-    	    FilterTableScanRule.INSTANCE,
-    	    FilterPushThroughFilter.INSTANCE,
-    	    
-    	    // push and merge projection rules
-    	    /*check the effectiveness of pushing down projections*/
-    	    ProjectRemoveRule.INSTANCE,
-    	    //ProjectJoinTransposeRule.INSTANCE, /*it is implemented in hepPlanner*/
-    	    //JoinProjectTransposeRule.BOTH_PROJECT,
-    	    //ProjectFilterTransposeRule.INSTANCE, /*it is better to use filter first an then project*/
-    	    ProjectTableScanRule.INSTANCE,
-    	    ProjectWindowTransposeRule.INSTANCE, /*maybe it has to be implemented in hepPlanner*/
-    	    ProjectMergeRule.INSTANCE,
-    	    //maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
-    	    
-    	    //aggregate rules
-    	    AggregateRemoveRule.INSTANCE,
-    	    AggregateJoinTransposeRule.EXTENDED,
-    	    AggregateProjectMergeRule.INSTANCE,
-    	    AggregateProjectPullUpConstantsRule.INSTANCE,
-            AggregateExpandDistinctAggregatesRule.INSTANCE,
-            AggregateReduceFunctionsRule.INSTANCE, /*Has to be implemented in a better way.*/
-            //AggregateExpandDistinctAggregatesRule.JOIN,
-            
-            //join rules    
-    	    /*A simple trick is to consider a window size (or better input rate) equal to stream cardinality.
-    	     * For tuple-based windows, the window size is equal to the number of tuples.
-    	     * For time-based windows, the window size is equal to the (input_rate*time_of_window).*/
-    	    //JoinToMultiJoinRule.INSTANCE ,
-    	    //LoptOptimizeJoinRule.INSTANCE , //is only capable of producing left-deep joins
-    	    //MultiJoinOptimizeBushyRule.INSTANCE,
-            JoinPushThroughJoinRule.LEFT, 
-            JoinPushThroughJoinRule.RIGHT,
-            JoinAssociateRule.INSTANCE,
-    	    JoinCommuteRule.INSTANCE,
-    	    JoinPushExpressionsRule.INSTANCE,
-    	    //maybe implement JoinAddNotNullRule.INSTANCE
-    	    JoinPushTransitivePredicatesRule.INSTANCE, //Planner rule that infers predicates from on a Join and creates Filter if those predicates can be pushed to its inputs.
-    	    
-    	    // simplify expressions rules    	    
-    	    ReduceExpressionsRule.FILTER_INSTANCE,
-    	    ReduceExpressionsRule.PROJECT_INSTANCE,
-    	    ReduceExpressionsRule.JOIN_INSTANCE,    	    
-    	    //ReduceDecimalsRule.INSTANCE,
-    	    // prune empty results rules   
-    	    PruneEmptyRules.FILTER_INSTANCE,
-    	    PruneEmptyRules.PROJECT_INSTANCE,
-    	    PruneEmptyRules.AGGREGATE_INSTANCE,
-    	    PruneEmptyRules.JOIN_LEFT_INSTANCE,    
-    	    PruneEmptyRules.JOIN_RIGHT_INSTANCE,
-    	    
-    	    /*Enumerable Rules*/
-    	    EnumerableRules.ENUMERABLE_FILTER_RULE,
-    	    EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-    	    EnumerableRules.ENUMERABLE_PROJECT_RULE,
-    	    EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
-    	    EnumerableRules.ENUMERABLE_JOIN_RULE,
-    	    EnumerableRules.ENUMERABLE_WINDOW_RULE
-    	    //EnumerableRules.ENUMERABLE_VALUES_RULE //The VALUES clause creates an inline table with a given set of rows.
-    												 //Streaming is disallowed. The set of rows never changes, and therefore 
-    												 //a stream would never return any rows.*/
-            ));
-    
+    		//FilterProjectTransposeRule.INSTANCE,
+    		//ProjectFilterTransposeRule.INSTANCE,
+    		//AggregateJoinTransposeRule.INSTANCE		    	    
+
+            //));
+    /*
     if (greedyJoinOrder) {
     	VOLCANO_RULES.removeAll(ImmutableList.of(
     			JoinPushThroughJoinRule.LEFT, 
@@ -190,11 +137,27 @@ public class SaberPlanner {
     	VOLCANO_RULES.addAll(ImmutableList.of(
     			JoinToMultiJoinRule.INSTANCE,
     			LoptOptimizeJoinRule.INSTANCE));
+    }*/
+    
+    if (useRatesCostModel) {
+    	VOLCANO_RULES.addAll(ImmutableList.of(
+        	    SaberLogicalProjectRule.INSTANCE,
+        	    SaberLogicalTableScanRule.INSTANCE,
+        	    SaberLogicalFilterRule.INSTANCE,
+        	    SaberLogicalJoinRule.INSTANCE,
+        	    SaberLogicalAggregateRule.INSTANCE,
+        	    SaberLogicalWindowRule.INSTANCE,
+        	    AbstractConverter.ExpandConversionRule.INSTANCE
+    			));
+    	VOLCANO_RULES.addAll(SaberRuleSets.VOLCANO_RULES);
+    } else {
+    	VOLCANO_RULES.addAll(SaberRuleSets.PRE_JOIN_ORDERING_RULES);
     }
 
     
     Program program =Programs.ofRules(VOLCANO_RULES);
-    SaberRelOptCostFactory saberCostFactory = new SaberCostBase.SaberCostFactory(); //custom factory with rates
+    SaberRelOptCostFactory saberCostFactory = (useRatesCostModel) ? new SaberCostBase.SaberCostFactory() : null; //SaberCostFactory is custom factory with rates
+
     FrameworkConfig config = Frameworks.newConfigBuilder()
         .parserConfig(SqlParser.configBuilder()
             .setLex(Lex.MYSQL)
@@ -208,65 +171,32 @@ public class SaberPlanner {
         .typeSystem(SaberRelDataTypeSystem.SABER_REL_DATATYPE_SYSTEM)
         .programs(program)
         .build();
-    this.planner = Frameworks.getPlanner(config);
-
-    // Create hep planner for optimizations.
-    HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
-    hepProgramBuilder.addRuleInstance(EnumerableJoinToLogicalJoinRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(EnumerableProjectToLogicalProjectRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(EnumerableFilterToLogicalFilterRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(EnumerableAggregateToLogicalAggregateRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(EnumerableTableScanToLogicalTableScanRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(EnumerableWindowToLogicalWindowRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(ProjectToWindowRule.INSTANCE); 
-    hepProgramBuilder.addRuleInstance(ProjectJoinTransposeRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(ProjectRemoveRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(ProjectTableScanRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(ProjectWindowTransposeRule.INSTANCE); 
-    hepProgramBuilder.addRuleInstance(ProjectMergeRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(AggregateProjectMergeRule.INSTANCE);
-    hepProgramBuilder.addRuleInstance(AggregateProjectPullUpConstantsRule.INSTANCE);
-    //hepProgramBuilder.addRuleInstance(JoinToMultiJoinRule.INSTANCE);
-    //hepProgramBuilder.addRuleInstance(LoptOptimizeJoinRule.INSTANCE); //is only capable of producing left-deep joins
-       
-    hepProgramBuilder.addMatchOrder(HepMatchOrder.BOTTOM_UP);
-    /*maybe add addMatchOrder(HepMatchOrder.BOTTOM_UP)to HepPlanner and change
-     final HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
-      	with the option to keep the graph a tree(noDAG=true) or allow DAG(noDAG=false).
-     */
-    this.hepPlanner = new HepPlanner(hepProgramBuilder.build());
-    
-    /*The order in which the rules within a collection will be attempted is
-     arbitrary, so if more control is needed, use addRuleInstance.*/
+    this.planner = Frameworks.getPlanner(config);    
   }
 
-  public RelNode hepOptimization(RelNode convertedNode) throws RelConversionException {	 	   
+  public RelNode hepOptimization(RelNode basePlan, HepMatchOrder order, RelOptRule... rules) throws RelConversionException {	 	   
     
-    final RelMetadataProvider provider = convertedNode.getCluster().getMetadataProvider();
+    HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
+    hepProgramBuilder.addMatchOrder(order);
+    for (RelOptRule r : rules)
+	      hepProgramBuilder.addRuleInstance(r);
+    /*  
+    	HepPlanner hepPlanner = new HepPlanner(hepProgram,null, noDag, null, RelOptCostImpl.FACTORY);
+  		with the option to keep the graph a tree(noDAG=true) or allow DAG(noDAG=false).
+    */
+    HepPlanner hepPlanner = new HepPlanner(hepProgramBuilder.build(),
+	          basePlan.getCluster().getPlanner().getContext());
+    
+    final RelMetadataProvider provider = basePlan.getCluster().getMetadataProvider();
     RelMetadataQuery.THREAD_PROVIDERS.set(JaninoRelMetadataProvider.of(provider));
     
     // Register RelMetadataProvider with HepPlanner.
     final List<RelMetadataProvider> list = Lists.newArrayList(provider);
     hepPlanner.registerMetadataProviders(list);
     final RelMetadataProvider cachingMetaDataProvider = new CachingRelMetadataProvider(ChainedRelMetadataProvider.of(list), hepPlanner);
-    convertedNode.accept(new MetaDataProviderModifier(cachingMetaDataProvider));
-
-    /*
-     * Maybe change the above two lines of code with :
-     * RelMetadataProvider chainedProvider = ChainedRelMetadataProvider.of(list);
-     * convertedNode.getCluster().setMetadataProvider(new CachingRelMetadataProvider(chainedProvider, hepPlanner));
-     */
-    /*
-    List<RelMetadataProvider> list = Lists.newArrayList();
-    list.add(DefaultRelMetadataProvider.INSTANCE);
-    hepPlanner.registerMetadataProviders(list);
-    RelMetadataProvider plannerChain =
-        ChainedRelMetadataProvider.of(list);
-    convertedNode.getCluster().setMetadataProvider(plannerChain);
-    */
+    basePlan.accept(new MetaDataProviderModifier(cachingMetaDataProvider));
     
-    System.out.println("Applying rules...");
-    hepPlanner.setRoot(convertedNode);
+    hepPlanner.setRoot(basePlan);
     RelNode rel = hepPlanner.findBestExp();
     
     // I think this line reset the metadata provider instances changed for hep planner execution.
@@ -295,25 +225,54 @@ public class SaberPlanner {
 
     SqlNode validatedSqlNode = validateNode(sqlNode);
     RelNode convertedNode = planner.convert(validatedSqlNode); 
-          
-    //use Volcano Planner to convert nodes
+
+    // Optimization Phase 1
+    System.out.println("Optimization Phase 1 : Applying Window Rewrite rules with HepPlanner...");
+    ImmutableList<RelOptRule> windowRewriteRules = SaberRuleSets.WINDOW_REWRITE_RULES;
+    RelNode preOptimizationNode = hepOptimization(convertedNode, HepMatchOrder.BOTTOM_UP,
+    		windowRewriteRules.toArray(new RelOptRule[windowRewriteRules.size()]) );
+    
+    // Optimization Phase 2
+    System.out.println("Optimization Phase 2 : Applying heuristic rules that don't use the cost model with HepPlanner...");
+    ImmutableList<RelOptRule> preVolcanoStaticRules = SaberRuleSets.PRE_VOLCANO_STATIC_RULES;
+    RelNode preVolcanoNode = hepOptimization(preOptimizationNode, HepMatchOrder.BOTTOM_UP,
+    		preVolcanoStaticRules.toArray(new RelOptRule[preVolcanoStaticRules.size()]) );
+    
+    //System.out.println (RelOptUtil.toString (preVolcanoNode, SqlExplainLevel.ALL_ATTRIBUTES));
+    // Optimization Phase 3
     //RelTraitSet traitSet = beforeplan.getTraitSet();
     //traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
-    RelTraitSet traitSet = planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);	
-    RelNode volcanoPlan = planner.transform(0, traitSet, convertedNode);       
+    System.out.println("Optimization Phase 3 : Applying cost-based rules that use the cost model with VolcanoPlanner...");
+    RelTraitSet traitSet = (useRatesCostModel) ? planner.getEmptyTraitSet().replace(SaberRel.SABER_LOGICAL)
+    		: planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);	
+    RelNode volcanoPlan = planner.transform(0, traitSet, preVolcanoNode);       
     
-    //compute cost
-    //final RelMetadataQuery mq = RelMetadataQuery.instance();
-    //RelMetadataQuery.THREAD_PROVIDERS.set( JaninoRelMetadataProvider.of(new MyRelMetadataProvider()));
-    /*RelOptCost relCost= mq.getCumulativeCost(beforeplan); //beforeplan.computeSelfCost( hepPlanner,mq);	 	   
-    System.out.println("Plan cost is : " + relCost.toString());
+    //System.out.println (RelOptUtil.toString (volcanoPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+    // Optimization Phase 4
+    System.out.println("Optimization Phase 4 : Applying heuristic rules for Join ordering with HepPlanner...");
+    ImmutableList<RelOptRule> heuristicJoinOrderingRules = (useRatesCostModel) ? SaberRuleSets.HEURISTIC_JOIN_ORDERING_RULES_2
+    		: SaberRuleSets.HEURISTIC_JOIN_ORDERING_RULES;
+    RelNode afterJoinNode = hepOptimization(volcanoPlan, HepMatchOrder.BOTTOM_UP,
+    		heuristicJoinOrderingRules.toArray(new RelOptRule[heuristicJoinOrderingRules.size()]) );        
 
-    System.out.println("Row count : " + mq.getRowCount(beforeplan));*/
-    System.out.println("Returning plan...");
+    // Print here the final Cost
+    System.out.println (RelOptUtil.toString (afterJoinNode, SqlExplainLevel.ALL_ATTRIBUTES));
     
-    RelNode finalPlan= hepOptimization(volcanoPlan);
+    // Optimization Phase 5
+    System.out.println("Optimization Phase 5 : Applying heuristic rules that convert either Saber or Enumerable Convention operators to Logical with HepPlanner...");
+    ImmutableList<RelOptRule> convertToLogicalRules = (useRatesCostModel) ? SaberRuleSets.CONVERT_TO_LOGICAL_RULES_2
+    		: SaberRuleSets.CONVERT_TO_LOGICAL_RULES;
+    RelNode convertedLogicalNode = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
+    		convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]) );
+            
+    // Optimization Phase 6
+    System.out.println("Optimization Phase 6 : Applying after Join heuristic rules with HepPlanner...");
+    ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES;
+    RelNode finalPlan = hepOptimization(convertedLogicalNode, HepMatchOrder.BOTTOM_UP,
+    		afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
+    
+    System.out.println("Returning plan...");    
     return finalPlan;    
-    //return planner.rel(validatedSqlNode).project();
   }  
   
   

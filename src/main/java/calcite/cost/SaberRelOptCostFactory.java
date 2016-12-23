@@ -8,5 +8,5 @@ public interface SaberRelOptCostFactory extends RelOptCostFactory {
    /**
 	* Creates a cost object.
 	*/
-	RelOptCost makeCost(double rowCount, double cpu, double io, double rate);
+	RelOptCost makeCost(double rate, double cpu, double memory, double window);
 }

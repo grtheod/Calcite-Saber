@@ -37,9 +37,12 @@ public class Tester {
 		
 		SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
 		
-		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));
-		schema.add("orders",   new     OrdersTableFactory().create(schema,    "orders", null, null));
-		schema.add("products", new   ProductsTableFactory().create(schema,  "products", null, null));
+		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
+		boolean useRatesCostModel = true;
+		
+		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null, useRatesCostModel));
+		schema.add("orders",   new     OrdersTableFactory().create(schema,    "orders", null, null, useRatesCostModel));
+		schema.add("products", new   ProductsTableFactory().create(schema,  "products", null, null, useRatesCostModel));
 		
 		/* Create a schema in Saber from a given SchemaPlus and add some mock data for testing.*/
 		DataGenerator dataGenerator = new DataGenerator()
@@ -48,10 +51,11 @@ public class Tester {
 		
 		Statement statement = connection.createStatement();
 		/*QueryPlanner is a combination of both Volcano and heuristic planner.*/
-		/*QueryPlanner's constructor needs (Schema, Statement, bushy).
-		 * @bushy is a boolean that defines if the want a bushy Join Reorder or not 
+		/*QueryPlanner's constructor needs (Schema, greedy, useRatesCostModel).
+		 * @greedy is a boolean that defines if we want a greedy Join Reorder or not
+		 * @useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
 		 * */
-		QueryPlanner queryPlanner = new QueryPlanner(rootSchema, statement, false);
+		SaberPlanner queryPlanner = new SaberPlanner(rootSchema, true, useRatesCostModel);
 		
 		/* Until it is fixed, when joining two tables and then using group by, the attributes of group by predicate should be 
 		 * from the first table. For example:
@@ -67,11 +71,13 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-			     "select *  "
-			    	     + "from  s.products join s.orders  "
-			    	     + "on s.orders.productid = s.products.productid  "
-			    	     + " where units>10 and description < 20 "
-			    	     );
+				"select s.orders.productid,s.orders.customerid  " 
+					    + "from  s.products, s.orders, s.customers " 
+					    + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid " 
+					    + " and units>5 " );
+     
+
+
 				
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
 			
@@ -91,9 +97,9 @@ public class Tester {
 		long timestampReference = System.nanoTime();
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
-		//physicalPlan.convert (logicalPlan);
+		physicalPlan.convert (logicalPlan);
 		
-		//physicalPlan.execute();
+		physicalPlan.execute();
 		
 		/*
 		 * Notes:

@@ -29,17 +29,25 @@ public class CustomersTableFactory implements TableFactory<Table>  {
  * @param operand The "operand" JSON property
  * @param rowType Row type. Specified if the "columns" JSON property. 
  */
+	public boolean useRatesCostModel;
+	
+	@Override
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
-		    {ts(10,15,0), 1, 1012},
-		    {ts(10,15,0), 2, 5334},
-		    {ts(10,15,0), 3, 2222},
-		    {ts(10,15,0), 4, 3232},
-		    {ts(10,15,0), 5, 3121},
-		    {ts(10,15,0), 6, 13232},
-		    {ts(10,15,0), 7, 15123},
-		};
-		return new CustomersTable(ImmutableList.copyOf(rows));
+			    {ts(10,15,0), 1, 1012},
+			    {ts(10,15,0), 2, 5334},
+			    {ts(10,15,0), 3, 2222},
+			    {ts(10,15,0), 4, 3232},
+			    {ts(10,15,0), 5, 3121},
+			    {ts(10,15,0), 6, 13232},
+			    {ts(10,15,0), 7, 15123},
+			};
+			return new CustomersTable(ImmutableList.copyOf(rows), useRatesCostModel);
+	}
+	
+	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType, boolean useRatesCostModel) {
+		this.useRatesCostModel = useRatesCostModel;
+		return create(schema, name, operand, rowType);
 	}
 
 	public static class CustomersTable implements ScannableTable {
@@ -54,9 +62,11 @@ public class CustomersTableFactory implements TableFactory<Table>  {
 		};
 
 		private final ImmutableList<Object[]> rows;
+		public boolean useRatesCostModel;
 
-		public CustomersTable(ImmutableList<Object[]> rows) {
+		public CustomersTable(ImmutableList<Object[]> rows, boolean useRatesCostModel) {
 			this.rows = rows;
+			this.useRatesCostModel = useRatesCostModel;
 		}
 
 		public Enumerable<Object[]> scan(DataContext root) {
@@ -69,7 +79,7 @@ public class CustomersTableFactory implements TableFactory<Table>  {
 
 		public Statistic getStatistic() {
 			//int rowCount = rows.size();
-			int rowCount = 8192;
+			int rowCount = (this.useRatesCostModel) ? 8192 : 1;
 			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of(), 
 					RelCollations.createSingleton(0)); //add List<ImmutableBitSet>
 		}

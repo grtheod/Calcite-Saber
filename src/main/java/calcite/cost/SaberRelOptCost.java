@@ -5,4 +5,8 @@ import org.apache.calcite.plan.RelOptCost;
 public interface SaberRelOptCost extends RelOptCost {
 	
 	double getRate();
+	
+	double getWindow();
+	
+	double getR();
 }

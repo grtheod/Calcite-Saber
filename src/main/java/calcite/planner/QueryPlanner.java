@@ -93,13 +93,13 @@ import com.google.common.collect.Lists;
 
 import calcite.cost.SaberCostBase;
 import calcite.cost.SaberRelOptCostFactory;
-import calcite.planner.logical.EnumerableAggregateToLogicalAggregateRule;
-import calcite.planner.logical.EnumerableFilterToLogicalFilterRule;
-import calcite.planner.logical.EnumerableJoinToLogicalJoinRule;
-import calcite.planner.logical.EnumerableProjectToLogicalProjectRule;
-import calcite.planner.logical.EnumerableTableScanToLogicalTableScanRule;
-import calcite.planner.logical.EnumerableWindowToLogicalWindowRule;
-import calcite.planner.logical.FilterPushThroughFilter;
+import calcite.planner.logical.rules.EnumerableAggregateToLogicalAggregateRule;
+import calcite.planner.logical.rules.EnumerableFilterToLogicalFilterRule;
+import calcite.planner.logical.rules.EnumerableJoinToLogicalJoinRule;
+import calcite.planner.logical.rules.EnumerableProjectToLogicalProjectRule;
+import calcite.planner.logical.rules.EnumerableTableScanToLogicalTableScanRule;
+import calcite.planner.logical.rules.EnumerableWindowToLogicalWindowRule;
+import calcite.planner.logical.rules.FilterPushThroughFilter;
 import calcite.planner.physical.SaberLogicalConvention;
 
 /**

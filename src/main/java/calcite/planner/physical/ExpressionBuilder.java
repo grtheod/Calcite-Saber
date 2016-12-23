@@ -33,7 +33,7 @@ public class ExpressionBuilder {
 
 	public Pair<Expression, Integer> build() {
 		Expression saberExpression = getExpression(expression).right;	
-		System.out.println(saberExpression.toString());
+		//System.out.println(saberExpression.toString());
 		return new Pair<Expression, Integer>(saberExpression,this.windowBorder);
 	}
 

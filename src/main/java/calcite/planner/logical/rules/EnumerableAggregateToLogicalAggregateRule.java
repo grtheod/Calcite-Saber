@@ -1,4 +1,4 @@
-package calcite.planner.logical;
+package calcite.planner.logical.rules;
 
 import org.apache.calcite.adapter.enumerable.EnumerableAggregate;
 import org.apache.calcite.plan.RelOptRule;

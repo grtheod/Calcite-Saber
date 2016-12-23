@@ -75,14 +75,25 @@ public class PredicateUtil {
 	        	int comparisonOperator = getComparisonOperator(rex.getOperator().toString());
 	        	/*supports only integer expressions at the moment*/
 	    		IntExpression firstOp,secondOp;
-	    		
+	    		// fix the out of order columns
+	    		int tempOper1 = Integer.parseInt(rex.getOperands().get(0).toString().replace("$", "").trim());
+	    		int tempOper2 = Integer.parseInt(rex.getOperands().get(1).toString().replace("$", "").trim());
+	    		//System.out.println("operators before "+tempOper1 +"  "+ tempOper2);
+	    		if ((tempOper1 > tempOper2) && (joinOffset > 0)) {
+	    			int tempOper = tempOper2;
+	    			tempOper2 = tempOper1;
+	    			tempOper1 = tempOper;	    			
+	    		}	    		
+	    		tempOper2 = tempOper2 - joinOffset; //using joinOffset to fix the second operand in the case of join
+	    		//System.out.println("operators after  "+tempOper1 +"  "+ tempOper2);
+
 	    		if(rex.getOperands().get(0).toString().contains("$")){
-	    			firstOp = new IntColumnReference(Integer.parseInt(rex.getOperands().get(0).toString().replace("$", "").trim()));
+	    			firstOp = new IntColumnReference(tempOper1);
 	    		}else {
 	    			firstOp = new IntConstant(Integer.parseInt(rex.getOperands().get(0).toString().trim()));
 	    		}
-	    		if(rex.getOperands().get(1).toString().contains("$")){ //using joinOffset to fix the second operand in the case of join
-	    			secondOp = new IntColumnReference(Integer.parseInt(rex.getOperands().get(1).toString().replace("$", "").trim()) - joinOffset);
+	    		if(rex.getOperands().get(1).toString().contains("$")){
+	    			secondOp = new IntColumnReference(tempOper2);
 	    		}else {
 	    			secondOp = new IntConstant(Integer.parseInt(rex.getOperands().get(1).toString().trim()));
 	    		}	    		

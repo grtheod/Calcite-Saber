@@ -87,6 +87,7 @@ public class SaberJoinRule implements SaberRule{
 		
 		query = new Query (queryId, operators, schema1, window1, schema2, window2, queryConf, timestampReference);
 		outputSchema = ExpressionsUtil.mergeTupleSchemas(schema1, schema2);
+		//System.out.println("schema1" + schema1.getSchema()); System.out.println("schema2" + schema2.getSchema());
 		int attributesOfSchema1 = schema1.numberOfAttributes();
 		int attributesOfOutputSchema = outputSchema.numberOfAttributes();
 		for (int i = 0; i < attributesOfSchema1; i++){

@@ -1,4 +1,4 @@
-package calcite.planner.logical;
+package calcite.planner.logical.rules;
 
 import java.util.ArrayList;
 import java.util.List;
