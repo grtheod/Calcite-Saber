@@ -38,6 +38,7 @@ public class SaberWindowRule implements SaberRule{
 	Query query;
 	int queryId = 0;
 	long timestampReference = 0;
+	int numberOfGroupByAttributes;
 	
 	public SaberWindowRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window){
 		this.rel = rel;
@@ -69,6 +70,7 @@ public class SaberWindowRule implements SaberRule{
 		FloatColumnReference [] aggregationAttributes = aggr.right;
 		
 		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(windowAgg.groups.get(0).keys, schema);
+		numberOfGroupByAttributes = groupByAttributes.length;
 		Expression [] limitedGroupByAttributes = null; //without rowtime column
 		if (!(groupByAttributes == null) && (groupByAttributes.length > 1)) {
 			int i;
@@ -131,7 +133,8 @@ public class SaberWindowRule implements SaberRule{
 
 	@Override
 	public int getWindowOffset() {
-		return this.schema.numberOfAttributes();
+		int windowOffset = this.schema.numberOfAttributes() - numberOfGroupByAttributes;
+		return windowOffset;
 	}
 	
 }

@@ -37,9 +37,9 @@ public abstract class SaberProjectRelBase extends Project implements SaberRelNod
 	  double windowRange = 0; // find it in a better way
 	  for (RexNode attr : projectedAttrs){
 		  if (!(attr.getKind().toString().equals("INPUT_REF"))) {
-				Pair<Expression, Integer> pair = new ExpressionBuilder(attr).build();			
-				if (pair.right > 0) {
-					windowRange = pair.right * rate; // W = T * λi
+				int tempSize = new ExpressionBuilder(attr,0).getWindowForPlan();			
+				if (tempSize > 0) {
+					windowRange = tempSize * rate; // W = T * λi
 				}
 		  }
 	  }

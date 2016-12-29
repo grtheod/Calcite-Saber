@@ -65,12 +65,12 @@ public class RuleAssembler {
 		switch (operator){			
 			case PROJECT :			
 				System.out.println("==> Assembling Projection");
-				SaberProjectRule project = new SaberProjectRule(schema1, rel, queryId, timestampReference, null, windowOffset);
+				SaberProjectRule project = new SaberProjectRule(schema1, rel, queryId, timestampReference, window1, windowOffset);
 				project.prepareRule();				
 				return project;
 			case FILTER :
 				System.out.println("==> Assembling Filter");
-				SaberFilterRule filter = new SaberFilterRule(schema1, rel, queryId, timestampReference, null);
+				SaberFilterRule filter = new SaberFilterRule(schema1, rel, queryId, timestampReference, window1);
 				filter.prepareRule();				
 				return filter;			
 			case JOIN :

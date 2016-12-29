@@ -238,7 +238,7 @@ public class SaberPlanner {
     RelNode preVolcanoNode = hepOptimization(preOptimizationNode, HepMatchOrder.BOTTOM_UP,
     		preVolcanoStaticRules.toArray(new RelOptRule[preVolcanoStaticRules.size()]) );
     
-    //System.out.println (RelOptUtil.toString (preVolcanoNode, SqlExplainLevel.ALL_ATTRIBUTES));
+    System.out.println (RelOptUtil.toString (preVolcanoNode, SqlExplainLevel.ALL_ATTRIBUTES));
     // Optimization Phase 3
     //RelTraitSet traitSet = beforeplan.getTraitSet();
     //traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?

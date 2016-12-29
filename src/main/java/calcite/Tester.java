@@ -10,6 +10,9 @@ import java.util.List;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -71,14 +74,11 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-				"select s.orders.productid,s.orders.customerid  " 
-					    + "from  s.products, s.orders, s.customers " 
-					    + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid " 
-					    + " and units>5 " );
-     
-
-
-				
+		        "select s.orders.productid,s.orders.customerid  " 
+		                + "from  s.products, s.orders, s.customers " 
+		                + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid " 
+		                + " and units>5 " );
+		
 		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
 			
 		/*Set System Configuration.*/

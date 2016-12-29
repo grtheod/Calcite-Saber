@@ -130,7 +130,7 @@ public class SaberRuleSets {
 				);
 	
 	static final RelOptRule SABER_AGGREGATE_JOIN_TRANSPOSE_RULE = new AggregateJoinTransposeRule(SaberAggregateRel.class, 
-														SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER, false);
+														SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER, false); //EXTENDED??
 	static final RelOptRule SABER_FILTER_AGGREGATE_TRANSPOSE_RULE = new FilterAggregateTransposeRule(SaberFilterRel.class, 
 														SaberRelFactories.SABER_LOGICAL_BUILDER, SaberAggregateRel.class);
 	static final RelOptRule SABER_FILTER_PROJECT_TRANSPOSE_RULE = new FilterProjectTransposeRule(SaberFilterRel.class, SaberProjectRel.class, true, true,

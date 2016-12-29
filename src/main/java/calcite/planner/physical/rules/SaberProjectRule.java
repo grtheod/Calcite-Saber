@@ -48,14 +48,15 @@ public class SaberProjectRule implements SaberRule {
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
 		this.windowOffset = windowOffset;
+		this.window = window;
 	}
 	
 	public void prepareRule() {
 	
 		int batchSize = 1048576;
-		WindowType windowType = WindowType.ROW_BASED;
-		int windowRange = 1;
-		int windowSlide = 1;
+		WindowType windowType = (window!=null) ? window.getWindowType() : WindowType.ROW_BASED;
+		long windowRange = (window!=null) ? window.getSize() : 1;
+		long windowSlide = (window!=null) ? window.getSlide() : 1; //maybe keep the (1,1) window for project and filter??
 		int projectedAttributes = 0;
 		int expressionDepth = 1;
 				
@@ -74,10 +75,13 @@ public class SaberProjectRule implements SaberRule {
 		int column;
 		int i = 0;
 		for (RexNode attr : projectedAttrs){
+			//System.out.println(attr.toString());
 			if (attr.getKind().toString().equals("INPUT_REF")) {				
 				column = Integer.parseInt(attr.toString().replace("$", ""));
-				if ((windowOffset != 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalWindow
-					column -= windowOffset - 1;				
+				if ((windowOffset != 0) && (column >= windowOffset)){ //fix the offset when the previous operator was LogicalWindow
+					if (column==windowOffset)column+=1; 
+					column -= windowOffset;				
+				}
 				if (schema.getAttributeType(column).equals(PrimitiveType.INT))
 					expressions[i] = new IntColumnReference (column);
 				else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
@@ -86,7 +90,7 @@ public class SaberProjectRule implements SaberRule {
 					expressions[i] = new LongColumnReference (column);
 			} else { 
 				//pass the windowOffset to more complex expressions
-				Pair<Expression, Integer> pair = new ExpressionBuilder(attr).build();			
+				Pair<Expression, Integer> pair = new ExpressionBuilder(attr, windowOffset).build();			
 				expressions[i] = pair.left;
 				if (pair.right > 0) {
 					windowRange = pair.right;
@@ -103,8 +107,10 @@ public class SaberProjectRule implements SaberRule {
 		for (RexNode attr : projectedAttrs){
 			if (attr.getKind().toString().equals("INPUT_REF")) {
 				column = Integer.parseInt(attr.toString().replace("$", ""));
-				if ((windowOffset != 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalWindow
-					column -= windowOffset - 1;
+				if ((windowOffset != 0) && (column >= windowOffset)){ //fix the offset when the previous operator was LogicalWindow
+					if (column==windowOffset)column+=1; 
+					column -= windowOffset;		
+				}
 				outputSchema.setAttributeName(i, schema.getAttributeName(column));
 			} else {
 				outputSchema.setAttributeName(i, attr.toString());
@@ -144,7 +150,7 @@ public class SaberProjectRule implements SaberRule {
 	}
 
 	public WindowDefinition getWindow() {
-		return window;
+		return this.window;
 	}
 
 	public WindowDefinition getWindow2() {

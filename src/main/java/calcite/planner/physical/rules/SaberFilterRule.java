@@ -41,14 +41,15 @@ public class SaberFilterRule implements SaberRule {
 		this.schema = schema;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
+		this.window = window;
 	}
 	
 	public void prepareRule() {
 	
 		int batchSize = 1048576;
-		WindowType windowType = WindowType.ROW_BASED;
-		int windowRange = 1;
-		int windowSlide = 1;
+		WindowType windowType = (window!=null) ? window.getWindowType() : WindowType.ROW_BASED;
+		long windowRange = (window!=null) ? window.getSize() : 1;
+		long windowSlide = (window!=null) ? window.getSlide() : 1;
 		LogicalFilter filter = (LogicalFilter) rel;
 		RexNode condition = filter.getCondition();
 		
@@ -91,7 +92,7 @@ public class SaberFilterRule implements SaberRule {
 	}
 
 	public WindowDefinition getWindow() {
-		return window;
+		return this.window;
 	}
 
 	public WindowDefinition getWindow2() {

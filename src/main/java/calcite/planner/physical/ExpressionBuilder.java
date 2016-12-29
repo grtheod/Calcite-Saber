@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.util.Pair;
 
 import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
@@ -26,9 +27,11 @@ public class ExpressionBuilder {
 
 	RexNode expression;
 	int windowBorder = 0;
+	int windowOffset;
 	
-	public ExpressionBuilder(RexNode expression) {
+	public ExpressionBuilder(RexNode expression, int windowOffset) {
 		this.expression = expression;
+		this.windowOffset = windowOffset;
 	}
 
 	public Pair<Expression, Integer> build() {
@@ -41,6 +44,7 @@ public class ExpressionBuilder {
 	    if (expression instanceof RexCall) {
 			List <Pair<RexNode, Expression>> operands = new ArrayList <Pair<RexNode, Expression>>();
 	        for (RexNode operand : ((RexCall) expression).getOperands()) {
+	        	System.out.println(operand);
 	        	operands.add(getExpression(operand));	        	
 	        } 	   
 	        String operator = ((RexCall) expression).getOperator().toString();
@@ -48,47 +52,52 @@ public class ExpressionBuilder {
 	        		(operator.equals("*")) || (operator.equals("/")) ){        		        	
 	        	return new Pair<RexNode,Expression>(expression, getSimpleExpression(operands, operator));        	
 	        } else
-	        if (operator.equals("CASE")) {
-	        	return null;
+	        if (operator.equals("CASE")) { //supports only sum currently and no avg	        	
+	        	int column = Integer.parseInt(((RexCall)(((RexCall) expression).operands.get(1))).operands.get(0).toString().replace("$", "").trim());
+	        	column -= windowOffset;
+	        	Expression expr = new FloatColumnReference (column);
+	        	//System.out.println("Sum inside case " + expr.toString());
+	        	return new Pair<RexNode,Expression>(expression,expr);	        	
 	    	} else 
 	    	if (operator.equals("CAST")) { 
 	        	return null;
 	        }
 	    	if (operator.equals("FLOOR")) {
 	    		//create floor expression
-	    		//operands.get(0); 
-	    		
-	    		this.windowBorder = createWindow(operands.get(1).left.toString().replace("FLAG(", "").replace(")", ""));
+	    		//operands.get(0); 	    		
+	    		this.windowBorder = createWindow(((RexCall) expression).operands.get(1).toString().replace("FLAG(", "").replace(")", ""));
 	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
 	        }
 	    	if (operator.equals("CEIL")) { 
 	    		//create ceil expression
 	    		//operands.get(0);
-
 	    		this.windowBorder = createWindow(operands.get(1).left.toString().replace("FLAG(", "").replace(")", ""));
 	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
 	        }
 	        return null;
 	    } else {  
-	    	Expression expr = null;
-			if (expression.getKind().toString().equals("LITERAL")) {				
-				if (expression.getType().toString().equals("INTEGER"))
-					expr = new IntConstant(Integer.parseInt(expression.toString()));
-				else if (expression.getType().toString().equals("FLOAT"))
-					expr = new FloatConstant(Float.parseFloat(expression.toString()));
-				else
-					expr = new LongColumnReference (0);// added for supporting floor,ceil
-			} else 
-			if (expression.getKind().toString().equals("INPUT_REF")){
-				int column = Integer.parseInt(expression.toString().replace("$", ""));				
-				if (expression.getType().toString().equals("INTEGER"))
-					expr = new IntColumnReference (column);
-				else if (expression.getType().toString().equals("FLOAT"))
-					expr = new FloatColumnReference (column);
-				else
-					expr = new LongColumnReference (column);
-			} 			
-	    	return new Pair<RexNode,Expression>(expression,expr);
+	    	if (!expression.toString().equals("null")) {
+		    	Expression expr = null;
+				if (expression.getKind().toString().equals("LITERAL")) {				
+					if (expression.getType().toString().equals("INTEGER"))
+						expr = new IntConstant(Integer.parseInt(expression.toString()));
+					else if (expression.getType().toString().equals("FLOAT"))
+						expr = new FloatConstant(Float.parseFloat(expression.toString()));
+					else
+						expr = new LongColumnReference (0);// added for supporting floor,ceil
+				} else 
+				if (expression.getKind().toString().equals("INPUT_REF")){
+					int column = Integer.parseInt(expression.toString().replace("$", ""));				
+					if (expression.getType().toString().equals("INTEGER"))
+						expr = new IntColumnReference (column);
+					else if (expression.getType().toString().equals("FLOAT"))
+						expr = new FloatColumnReference (column);
+					else
+						expr = new LongColumnReference (column);
+				} 			
+		    	return new Pair<RexNode,Expression>(expression,expr);
+	    	} else 
+	    		return null;	    	
 	    }
 	}
 
@@ -150,6 +159,17 @@ public class ExpressionBuilder {
 		System.err.println("error: not implemented yet");
 		System.exit(1);
 		return simpleExpression;
+	}
+	
+	public int getWindowForPlan(){
+		String operator = ((RexCall) expression).getOperator().toString();
+    	if (operator.equals("FLOOR")) {
+    		return this.windowBorder = createWindow(((RexCall) expression).operands.get(1).toString().replace("FLAG(", "").replace(")", ""));
+        }
+    	if (operator.equals("CEIL")) { 
+    		return this.windowBorder = createWindow(((RexCall) expression).operands.get(1).toString().replace("FLAG(", "").replace(")", ""));
+        }
+    	return 0;
 	}
 
 	public int getWindowBorder() {
