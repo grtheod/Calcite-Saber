@@ -1,5 +1,5 @@
 # Calcite-Saber
-1) Add saber-0.0.1-SNAPSHOT.jar from https://github.com/lsds/saber
+1) Add saber-0.0.1-SNAPSHOT.jar to External jars from /libs/saber/saber-snapshot/0.0.1
 
 2) Use the Tester.java and change the sql String in lines 55-61 (https://github.com/giwrgostheod/Calcite-Saber/blob/master/src/main/java/calcite/Tester.java#L55).
 
