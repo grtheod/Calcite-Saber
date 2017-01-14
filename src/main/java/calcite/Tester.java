@@ -1,11 +1,14 @@
 package calcite;
 
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.plan.RelOptUtil;
@@ -26,10 +29,76 @@ import calcite.utils.DataGenerator;
 import calcite.utils.OrdersTableFactory;
 import calcite.utils.ProductsTableFactory;
 import uk.ac.imperial.lsds.saber.SystemConf;
+import uk.ac.imperial.lsds.saber.SystemConf.SchedulingPolicy;
 
 public class Tester {
+	
+	public static final String usage = "usage: Tester for the system";
 
 	public static void main(String[] args) throws Exception {
+		
+		int circularBufferSize = 32 * 1048576;
+		boolean latencyOn = false;
+		SchedulingPolicy schedulingPolicy = SystemConf.SchedulingPolicy.HLS;
+		int switchThreshold = 10;
+		long throughputMonitorInterval = 1000L;
+		int partialWindows = 64;
+		int hashTableSize = 16*32768;
+		int unboundedBufferSize = 2 * 1048576;
+		int threads = 1;
+		
+		/* Parse command line arguments */
+		int i, j;
+		for (i = 0; i < args.length; ) {
+			if ((j = i + 1) == args.length) {
+				System.err.println(usage);
+				System.exit(1);
+			}
+			if (args[i].equals("--threads")) {
+				threads = Integer.parseInt(args[j]);
+			} else
+			if (args[i].equals("--circular-buffer-size")) { 
+				circularBufferSize = Integer.parseInt(args[j]);
+			} else
+			if (args[i].equals("--latency-on")) { 
+				latencyOn = Boolean.parseBoolean(args[j]);
+			} else
+			if (args[i].equals("--scheduling-policy")) { 
+				schedulingPolicy = SystemConf.SCHEDULING_POLICY.valueOf(args[j]);
+			} else
+			if (args[i].equals("--switch-threshold")) { 
+				switchThreshold = Integer.parseInt(args[j]);
+			} else
+			if (args[i].equals("--throughput-monitor-interval")) { 
+				throughputMonitorInterval = Long.parseLong(args[j]);
+			} else
+			if (args[i].equals("--partial-windows")) { 
+				partialWindows = Integer.parseInt(args[j]);
+			} else
+			if (args[i].equals("--hash-table-size")) { 
+				hashTableSize = Integer.parseInt(args[j]);
+			} else
+			if (args[i].equals("--unbounded-buffer-size")) { 
+				unboundedBufferSize = Integer.parseInt(args[j]);
+			} else {
+				System.err.println(String.format("error: unknown flag %s %s", args[i], args[j]));
+				System.exit(1);
+			}
+			i = j + 1;
+		}		
+		
+		/*Set System Configuration.*/
+		SystemConf sconf = new SystemConfig()
+				.setCircularBufferSize(circularBufferSize)
+				.setLatencyOn(latencyOn)
+				.setSchedulingPolicy(schedulingPolicy)
+				.setSwitchThreshold(switchThreshold)
+				.setThroughputMonitorInterval(throughputMonitorInterval)
+				.setPartialWindows(partialWindows)
+				.setHashTableSize(hashTableSize)
+				.setUnboundedBufferSize(unboundedBufferSize)
+				.setThreads(threads)
+				.build();	
 
 		Class.forName("org.apache.calcite.jdbc.Driver");
 
@@ -70,36 +139,37 @@ public class Tester {
 		 * ... 
 		 * */
 		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/	
-		/*We recommend that you always include the rowtime column in the SELECT clause. Having a sorted 
+		/* We recommend that you always include the rowtime column in the SELECT clause. Having a sorted 
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
-		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-		        "select s.orders.productid,s.orders.customerid  " 
-		                + "from  s.products, s.orders, s.customers " 
-		                + "where s.orders.productid = s.products.productid and s.customers.customerid=s.orders.customerid " 
-		                + " and units>5 " );
 		
-		System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
-			
-		/*Set System Configuration.*/
-		SystemConf sconf = new SystemConfig()
-				.setCircularBufferSize(32 * 1048576)
-				.setLatencyOn(false)
-				.setSchedulingPolicy(SystemConf.SchedulingPolicy.HLS)
-				.setSwitchThreshold(10)
-				.setThroughputMonitorInterval(1000L)
-				.setPartialWindows(64)
-				.setHashTableSize(16*32768)
-				.setUnboundedBufferSize(2 * 1048576)
-				.setThreads(1)
-				.build();			
+		Scanner in = new Scanner(System.in);		
+		System.out.print("Enter a query: ");
+		String query="";		
+	    in.useDelimiter("");
+	    while (in.hasNext()) {
+	    	String temp = in.next();
+	    	if (!temp.equals(";"))
+	    		query += temp;
+	    	else
+	    		break;
+	    }
+		RelNode logicalPlan = queryPlanner.getLogicalPlan (query);
+		
+//		RelNode logicalPlan = queryPlanner.getLogicalPlan (
+//             "select rowtime, sum(units), count(orderid) "
+//             + "from  s.orders "         
+//             + "group by rowtime,units,orderid, floor(rowtime to second)" 
+//             );
+		
+		//System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));					
 	
 		long timestampReference = System.nanoTime();
 		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
 		
 		physicalPlan.convert (logicalPlan);
 		
-		physicalPlan.execute();
+		//physicalPlan.execute();
 		
 		/*
 		 * Notes:

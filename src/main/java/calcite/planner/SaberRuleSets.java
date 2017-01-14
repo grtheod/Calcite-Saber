@@ -200,6 +200,29 @@ public class SaberRuleSets {
 				//ProjectToWindowRule.PROJECT,
 				ProjectWindowTransposeRule.INSTANCE
 				);		
+
+	static final RelOptRule SABER_JOIN_PUSH_EXPRESSIONS_RULE = new JoinPushExpressionsRule(SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
+	
+	static final RelOptRule SABER_AGGREGATE_PROJECT_MERGE_RULE = new AggregateProjectMergeRule(SaberAggregateRel.class, SaberProjectRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
+	
+	public static final ImmutableList<RelOptRule> AFTER_JOIN_RULES_2=
+			ImmutableList.of(
+					// 1. Run other optimizations that do not need stats
+					SABER_JOIN_PUSH_EXPRESSIONS_RULE,
+					ProjectRemoveRule.INSTANCE,
+					SABER_PROJECT_MERGE_RULE,
+					SABER_AGGREGATE_PROJECT_MERGE_RULE
+					//ProjectJoinTransposeRule.INSTANCE, !!
+					//ProjectJoinRemoveRule.INSTANCE,
+					//JoinCommuteRule.INSTANCE,
+				        
+			        // 2. Run aggregate-join transpose (cost based)
+					//AggregateJoinTransposeRule.INSTANCE,
+
+			        // 3. Run rule to fix windowing issue when it is done over aggregation columns
+					//ProjectToWindowRule.PROJECT,
+					//ProjectWindowTransposeRule.INSTANCE
+					);	
 	
 	public static final ImmutableList<RelOptRule> CONVERT_TO_LOGICAL_RULES =
 		ImmutableList.of(
@@ -218,7 +241,8 @@ public class SaberRuleSets {
 				SaberFilterRelToLogicalFilterRule.INSTANCE,
 				SaberAggregateRelToLogicalAggregateRule.INSTANCE,
 				SaberTableScanRelToLogicalTableScanRule.INSTANCE,
-				SaberWindowRelToLogicalWindowRule.INSTANCE
+				SaberWindowRelToLogicalWindowRule.INSTANCE,
+				ProjectWindowTransposeRule.INSTANCE
 				);
 	
 	public static final ImmutableList<RelOptRule> WINDOW_REWRITE_RULES =

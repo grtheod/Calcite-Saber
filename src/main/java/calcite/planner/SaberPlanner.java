@@ -238,7 +238,7 @@ public class SaberPlanner {
     RelNode preVolcanoNode = hepOptimization(preOptimizationNode, HepMatchOrder.BOTTOM_UP,
     		preVolcanoStaticRules.toArray(new RelOptRule[preVolcanoStaticRules.size()]) );
     
-    System.out.println (RelOptUtil.toString (preVolcanoNode, SqlExplainLevel.ALL_ATTRIBUTES));
+    //System.out.println (RelOptUtil.toString (preVolcanoNode, SqlExplainLevel.ALL_ATTRIBUTES));
     // Optimization Phase 3
     //RelTraitSet traitSet = beforeplan.getTraitSet();
     //traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
@@ -256,20 +256,42 @@ public class SaberPlanner {
     		heuristicJoinOrderingRules.toArray(new RelOptRule[heuristicJoinOrderingRules.size()]) );        
 
     // Print here the final Cost
-    System.out.println (RelOptUtil.toString (afterJoinNode, SqlExplainLevel.ALL_ATTRIBUTES));
-    
-    // Optimization Phase 5
-    System.out.println("Optimization Phase 5 : Applying heuristic rules that convert either Saber or Enumerable Convention operators to Logical with HepPlanner...");
-    ImmutableList<RelOptRule> convertToLogicalRules = (useRatesCostModel) ? SaberRuleSets.CONVERT_TO_LOGICAL_RULES_2
-    		: SaberRuleSets.CONVERT_TO_LOGICAL_RULES;
-    RelNode convertedLogicalNode = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
-    		convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]) );
-            
-    // Optimization Phase 6
-    System.out.println("Optimization Phase 6 : Applying after Join heuristic rules with HepPlanner...");
-    ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES;
-    RelNode finalPlan = hepOptimization(convertedLogicalNode, HepMatchOrder.BOTTOM_UP,
-    		afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
+    //System.out.println (RelOptUtil.toString (afterJoinNode, SqlExplainLevel.ALL_ATTRIBUTES));
+    RelNode finalPlan=null;
+    if (useRatesCostModel) {
+	    // Optimization Phase 5
+	    System.out.println("Optimization Phase 5 : Applying after Join heuristic rules with HepPlanner...");
+	    ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES_2;
+	    RelNode afterJoinPlan = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
+	    		afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
+    	
+	    // Print here the final Cost
+	    System.out.println ();
+	    System.out.println ("The optimal logical plan is:");
+	    System.out.println (RelOptUtil.toString (afterJoinPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+	    
+	    // Optimization Phase 6
+	    System.out.println("Optimization Phase 6 : Applying heuristic rules that convert either Saber or Enumerable Convention operators to Logical with HepPlanner...");
+	    ImmutableList<RelOptRule> convertToLogicalRules = SaberRuleSets.CONVERT_TO_LOGICAL_RULES_2;
+	    finalPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP,
+	    		convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]) );	            
+    } else {
+        System.out.println("Optimization Phase 5 : Applying heuristic rules that convert either Saber or Enumerable Convention operators to Logical with HepPlanner...");
+        ImmutableList<RelOptRule> convertToLogicalRules = SaberRuleSets.CONVERT_TO_LOGICAL_RULES;
+        RelNode convertedLogicalNode = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
+        		convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]) );
+                
+        // Optimization Phase 6
+        System.out.println("Optimization Phase 6 : Applying after Join heuristic rules with HepPlanner...");
+        ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES;
+        finalPlan = hepOptimization(convertedLogicalNode, HepMatchOrder.BOTTOM_UP,
+        		afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
+        
+	    // Print here the final Cost
+        System.out.println ();
+        System.out.println ("The optimal logical plan is:");
+	    System.out.println (RelOptUtil.toString (finalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+    }
     
     System.out.println("Returning plan...");    
     return finalPlan;    
