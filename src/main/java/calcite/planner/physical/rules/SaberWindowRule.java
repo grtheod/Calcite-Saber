@@ -1,5 +1,6 @@
 package calcite.planner.physical.rules;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -7,6 +8,7 @@ import java.util.Set;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalWindow;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 
 import calcite.planner.physical.AggregationUtil;
@@ -69,15 +71,17 @@ public class SaberWindowRule implements SaberRule{
 		AggregationType [] aggregationTypes = aggr.left;
 		FloatColumnReference [] aggregationAttributes = aggr.right;
 		
-		Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(windowAgg.groups.get(0).keys, schema);
-		numberOfGroupByAttributes = groupByAttributes.length;
-		Expression [] limitedGroupByAttributes = null; //without rowtime column
-		if (!(groupByAttributes == null) && (groupByAttributes.length > 1)) {
-			int i;
-			limitedGroupByAttributes = new Expression [groupByAttributes.length - 1];
-			for (i=1; i < groupByAttributes.length; i++)
-				limitedGroupByAttributes[i-1] = groupByAttributes[i]; 
+		//Expression [] groupByAttributes = aggrHelper.getGroupByAttributes(windowAgg.groups.get(0).keys, schema);
+		numberOfGroupByAttributes = windowAgg.groups.get(0).keys.length(); // groupByAttributes.length;
+		// exclude rowtime, floor and ceil from group by attributes
+		List<Integer> limitedGroupByList = new ArrayList<Integer>();
+		for ( Integer groupby : windowAgg.groups.get(0).keys){
+			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && !(schema.getAttributeName(groupby).contains("CEIL")) )
+				limitedGroupByList.add(groupby);
 		}
+		ImmutableBitSet limitedGroupSet = ImmutableBitSet.builder().addAll(limitedGroupByList).build();
+		Expression [] limitedGroupByAttributes = aggrHelper.getGroupByAttributes(limitedGroupSet, schema); 
+		System.out.println("The referenced columns of group by are: " + limitedGroupSet.toList().toString());
 		
 		cpuCode = new Aggregation (window, aggregationTypes, aggregationAttributes, limitedGroupByAttributes);
 		System.out.println(cpuCode);
