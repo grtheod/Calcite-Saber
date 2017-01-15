@@ -26,7 +26,9 @@ import calcite.planner.physical.PhysicalRuleConverter;
 import calcite.planner.physical.SystemConfig;
 import calcite.utils.CustomersTableFactory;
 import calcite.utils.DataGenerator;
+import calcite.utils.OrdersDeliveryTableFactory;
 import calcite.utils.OrdersTableFactory;
+import calcite.utils.PaymentsTableFactory;
 import calcite.utils.ProductsTableFactory;
 import uk.ac.imperial.lsds.saber.SystemConf;
 import uk.ac.imperial.lsds.saber.SystemConf.SchedulingPolicy;
@@ -46,6 +48,12 @@ public class Tester {
 		int hashTableSize = 16*32768;
 		int unboundedBufferSize = 2 * 1048576;
 		int threads = 1;
+		
+		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
+		boolean useRatesCostModel = true;
+		
+		// execute determines whether the plan is executed or not
+		boolean execute = true;
 		
 		/* Parse command line arguments */
 		int i, j;
@@ -80,7 +88,14 @@ public class Tester {
 			} else
 			if (args[i].equals("--unbounded-buffer-size")) { 
 				unboundedBufferSize = Integer.parseInt(args[j]);
-			} else {
+			} else
+			if (args[i].equals("--rates-cost-model")) { 
+				useRatesCostModel = Boolean.parseBoolean(args[j]);
+			} else
+			if (args[i].equals("--execute")) { 
+				execute = Boolean.parseBoolean(args[j]);
+			}
+			else {
 				System.err.println(String.format("error: unknown flag %s %s", args[i], args[j]));
 				System.exit(1);
 			}
@@ -109,16 +124,15 @@ public class Tester {
 		
 		SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
 		
-		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
-		boolean useRatesCostModel = true;
-		
 		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null, useRatesCostModel));
-		schema.add("orders",   new     OrdersTableFactory().create(schema,    "orders", null, null, useRatesCostModel));
-		schema.add("products", new   ProductsTableFactory().create(schema,  "products", null, null, useRatesCostModel));
+		schema.add("orders", new OrdersTableFactory().create(schema, "orders", null, null, useRatesCostModel));
+		schema.add("orders_delivery", new OrdersDeliveryTableFactory().create(schema, "orders_delivery", null, null, useRatesCostModel));				
+		schema.add("payments", new PaymentsTableFactory().create(schema, "payments", null, null, useRatesCostModel));		
+		schema.add("products", new ProductsTableFactory().create(schema, "products", null, null, useRatesCostModel));
 		
 		/* Create a schema in Saber from a given SchemaPlus and add some mock data for testing.*/
 		DataGenerator dataGenerator = new DataGenerator()
-						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(8192,32768, 16384)))
+						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(8192, 32768, 32768, 4096, 16384)))
 						.build();
 		
 		Statement statement = connection.createStatement();
@@ -145,15 +159,15 @@ public class Tester {
 		
 		Scanner in = new Scanner(System.in);		
 		System.out.print("Enter a query: ");
-		String query="";		
-	    in.useDelimiter("");
-	    while (in.hasNext()) {
-	    	String temp = in.next();
-	    	if (!temp.equals(";"))
-	    		query += temp;
-	    	else
-	    		break;
-	    }
+		String query="";
+		in.useDelimiter("");
+		while (in.hasNext()) {
+			String temp = in.next();
+			if (!temp.equals(";"))
+				query += temp;
+			else
+				break;
+			}
 		RelNode logicalPlan = queryPlanner.getLogicalPlan (query);
 		
 //		RelNode logicalPlan = queryPlanner.getLogicalPlan (
@@ -169,7 +183,8 @@ public class Tester {
 		
 		physicalPlan.convert (logicalPlan);
 		
-		//physicalPlan.execute();
+		if (execute)
+			physicalPlan.execute();
 		
 		/*
 		 * Notes:

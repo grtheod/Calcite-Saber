@@ -33,7 +33,7 @@ public class SchemaConverter {
 		    RelDataTypeFactory typeFactory = new SqlTypeFactoryImpl(SaberRelDataTypeSystem.SABER_REL_DATATYPE_SYSTEM);						
 			List<RelDataTypeField> fields = calTable.getRowType(typeFactory).getFieldList();
 			ITupleSchema saberSchema = new SaberSchema().createTable(fields);
-			System.out.println("Schema : " + saberSchema.getSchema());
+			System.out.println("s." + table + " Schema : " + saberSchema.getSchema());
 			
 			table = schema.getName() + "." + table; //add the schema prefix
 			tablesList.add(new Pair <String,ITupleSchema>(table, saberSchema));
