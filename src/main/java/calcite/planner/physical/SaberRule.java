@@ -1,5 +1,7 @@
 package calcite.planner.physical;
 
+import org.apache.calcite.util.Pair;
+
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
 import uk.ac.imperial.lsds.saber.WindowDefinition;
@@ -19,6 +21,6 @@ public interface SaberRule {
 	
 	public WindowDefinition getWindow2();
 	
-	public int getWindowOffset();
+	public Pair<Integer, Integer> getWindowOffset();
 	
 }

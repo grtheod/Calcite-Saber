@@ -41,13 +41,15 @@ public class SaberProjectRule implements SaberRule {
 	int queryId = 0;
 	long timestampReference = 0;
 	int windowOffset;
+	int windowBarrier;
 	
-	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int windowOffset) {
+	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int windowOffset, int windowBarrier) {
 		this.schema = schema;
 		this.rel = rel;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
 		this.windowOffset = windowOffset;
+		this.windowBarrier = windowBarrier;
 		this.window = window;
 	}
 	
@@ -78,10 +80,12 @@ public class SaberProjectRule implements SaberRule {
 			//System.out.println(attr.toString());
 			if (attr.getKind().toString().equals("INPUT_REF")) {				
 				column = Integer.parseInt(attr.toString().replace("$", ""));
-				if ((windowOffset != 0) && (column >= windowOffset)){ //fix the offset when the previous operator was LogicalWindow
-					if (column==windowOffset)column+=1; 
-					column -= windowOffset;				
-				}
+				if ((windowBarrier >= 0) && (column >= windowOffset) && (column > 0)){ //fix the offset when the previous operator was LogicalWindow
+					//if (column==windowOffset)column+=1; 
+					column -= windowBarrier;	
+				}				
+				if ((windowBarrier < 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalAggregate
+					column -= 1;
 				if (schema.getAttributeType(column).equals(PrimitiveType.INT))
 					expressions[i] = new IntColumnReference (column);
 				else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
@@ -107,10 +111,12 @@ public class SaberProjectRule implements SaberRule {
 		for (RexNode attr : projectedAttrs){
 			if (attr.getKind().toString().equals("INPUT_REF")) {
 				column = Integer.parseInt(attr.toString().replace("$", ""));
-				if ((windowOffset != 0) && (column >= windowOffset)){ //fix the offset when the previous operator was LogicalWindow
-					if (column==windowOffset)column+=1; 
-					column -= windowOffset;		
-				}
+				if ((windowBarrier >= 0) && (column >= windowOffset) && (column > 0)){ //fix the offset when the previous operator was LogicalWindow
+					//if (column==windowOffset)column+=1; 
+					column -= windowBarrier;	
+				}				
+				if ((windowBarrier < 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalAggregate
+					column -= 1;
 				outputSchema.setAttributeName(i, schema.getAttributeName(column));
 			} else {
 				outputSchema.setAttributeName(i, attr.toString());
@@ -157,8 +163,8 @@ public class SaberProjectRule implements SaberRule {
 		return null;
 	}
 
-	public int getWindowOffset() {
-		return 0;
+	public Pair<Integer, Integer> getWindowOffset() {
+		return new Pair<Integer, Integer>(0,0);
 	}
 	
 }

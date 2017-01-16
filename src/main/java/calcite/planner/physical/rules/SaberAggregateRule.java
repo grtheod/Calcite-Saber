@@ -39,7 +39,7 @@ public class SaberAggregateRule implements SaberRule{
 	Query query;
 	int queryId = 0;
 	long timestampReference = 0;
-	
+	int windowOffset = 0;
 	
 	public SaberAggregateRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window){
 		this.rel = rel;
@@ -71,9 +71,13 @@ public class SaberAggregateRule implements SaberRule{
 		// error with rowtime column : should always be placed first in groupBy!!!
 		// exclude rowtime, floor and ceil from group by attributes
 		List<Integer> limitedGroupByList = new ArrayList<Integer>();
+		int i = 0;
 		for ( Integer groupby : aggregate.getGroupSet()){
 			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && !(schema.getAttributeName(groupby).contains("CEIL")) )
 				limitedGroupByList.add(groupby);
+			if ((schema.getAttributeName(groupby).contains("FLOOR")) || (schema.getAttributeName(groupby).contains("CEIL")) )
+				this.windowOffset =  i; // works only with one floor or ceil
+			i++;
 		}
 		ImmutableBitSet limitedGroupSet = ImmutableBitSet.builder().addAll(limitedGroupByList).build();
 		Expression [] limitedGroupByAttributes = aggrHelper.getGroupByAttributes(limitedGroupSet, schema); 
@@ -122,8 +126,8 @@ public class SaberAggregateRule implements SaberRule{
 		return null;
 	}
 	
-	public int getWindowOffset() {				
-		return 0;
+	public Pair<Integer, Integer> getWindowOffset() {				
+		return new Pair<Integer, Integer>(this.windowOffset,-1);
 	}
 	
 }

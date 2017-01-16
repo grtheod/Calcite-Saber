@@ -41,6 +41,7 @@ public class SaberWindowRule implements SaberRule{
 	int queryId = 0;
 	long timestampReference = 0;
 	int numberOfGroupByAttributes;
+	int windowBarrier=0;
 	
 	public SaberWindowRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window){
 		this.rel = rel;
@@ -79,6 +80,15 @@ public class SaberWindowRule implements SaberRule{
 			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && !(schema.getAttributeName(groupby).contains("CEIL")) )
 				limitedGroupByList.add(groupby);
 		}
+		int inputAttrs = schema.numberOfAttributes();
+		for (int i = 0; i<inputAttrs; i++) {
+			System.out.println((schema.getAttributeName(i).toString()));
+			if ((schema.getAttributeName(i).contains("FLOOR")) || (schema.getAttributeName(i).contains("CEIL"))){
+					this.windowBarrier = i;
+					break;
+			}
+		}
+		System.out.println("aa"+this.windowBarrier);
 		ImmutableBitSet limitedGroupSet = ImmutableBitSet.builder().addAll(limitedGroupByList).build();
 		Expression [] limitedGroupByAttributes = aggrHelper.getGroupByAttributes(limitedGroupSet, schema); 
 		System.out.println("The referenced columns of group by are: " + limitedGroupSet.toList().toString());
@@ -136,9 +146,9 @@ public class SaberWindowRule implements SaberRule{
 	}
 
 	@Override
-	public int getWindowOffset() {
+	public Pair<Integer, Integer> getWindowOffset() {
 		int windowOffset = this.schema.numberOfAttributes() - numberOfGroupByAttributes;
-		return windowOffset;
+		return new Pair<Integer, Integer> (windowOffset,this.windowBarrier) ;
 	}
 	
 }

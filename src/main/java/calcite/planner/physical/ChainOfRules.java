@@ -13,8 +13,9 @@ public class ChainOfRules {
 	boolean isJoin;
 	boolean hasMore;
 	int windowOffset;
+	int windowBarrier;
 	
-	ChainOfRules(Query query, ITupleSchema outputSchema, WindowDefinition window, byte [] data, boolean isJoin, boolean isFirst, int windowOffset) {
+	ChainOfRules(Query query, ITupleSchema outputSchema, WindowDefinition window, byte [] data, boolean isJoin, boolean isFirst, int windowOffset, 	int windowBarrier) {
 		this.query = query;
 		this.outputSchema = outputSchema;
 		this.data1 = data;
@@ -22,6 +23,7 @@ public class ChainOfRules {
 		this.isFirst = isFirst;
 		this.isJoin = isJoin;
 		this.windowOffset = windowOffset;
+		this.windowBarrier = windowBarrier;
 	}
 	
 	ChainOfRules(Query query, ITupleSchema outputSchema, WindowDefinition window, byte [] data1 , byte [] data2, boolean isJoin,boolean isFirst, boolean hasMore) {
@@ -75,5 +77,9 @@ public class ChainOfRules {
 	
 	public int getWindowOffset() {
 		return this.windowOffset;
+	}
+	
+	public int getWindowBarrier() {
+		return this.windowBarrier;
 	}
 }

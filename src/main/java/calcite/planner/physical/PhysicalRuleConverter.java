@@ -67,7 +67,7 @@ public class PhysicalRuleConverter {
 		RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), pair.left, queryId, timestampReference, true);	    
 		SaberRule rule = operation.construct();
 		Query query = rule.getQuery();
-		chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),pair.right.left,false,true,0));
+		chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),pair.right.left,false,true,0,0));
 		System.out.println("Current query id : "+ query.getId());
 		queries.add(query); 		    		    		   		    
 		System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
@@ -104,7 +104,7 @@ public class PhysicalRuleConverter {
 			SaberRule rule = operation.construct();
 			Query query = rule.getQuery();
 			ITupleSchema outputSchema = rule.getOutputSchema();
-			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,rule.getWindow(),pair.right.left,false,false,0));
+			chains.put(chainTail.getId(), new ChainOfRules(query,outputSchema,rule.getWindow(),pair.right.left,false,false,0,0));
 			System.out.println("OutputSchema : " + outputSchema.getSchema());
 			
 			return new Pair<Integer, String>(chainTail.getId(),chainTail.getRelTypeName());			
@@ -117,7 +117,7 @@ public class PhysicalRuleConverter {
 			//System.out.println(logicalPlan.getRelTypeName());
 			
 			ChainOfRules chain = chains.get(node.left);
-			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference, chain.getWindow(), chain.getWindowOffset());
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference, chain.getWindow(), chain.getWindowOffset(), chain.getWindowBarrier());
 			SaberRule rule = operation.construct();
 		    
 			if ((logicalPlan.getRelTypeName().equals("LogicalAggregate")) || (logicalPlan.getRelTypeName().equals("LogicalWindow"))) {
@@ -129,10 +129,10 @@ public class PhysicalRuleConverter {
 			queryId++; //increment the queryId for the next query
 			if (!(node.right.equals("LogicalTableScan"))) {
 			    chain.getQuery().connectTo(query);
-			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,false,rule.getWindowOffset()));
+			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,false,rule.getWindowOffset().left,rule.getWindowOffset().right));
 			} else { 
 				//the first operator after LogicalTableScan is assigned to process the input data
-				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,true,rule.getWindowOffset()));
+				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,true,rule.getWindowOffset().left,rule.getWindowOffset().right));
 			}
 			queries.add(query); 		    		    		   		    
 			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());

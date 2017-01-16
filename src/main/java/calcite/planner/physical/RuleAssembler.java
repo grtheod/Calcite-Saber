@@ -24,7 +24,7 @@ public class RuleAssembler {
 	RelNode rel;
 	ITupleSchema schema1, schema2;
 	WindowDefinition window1, window2;
-	int queryId, windowOffset;
+	int queryId, windowOffset, windowBarrier;
 	long timestampReference;
 	boolean flag = false;
 	
@@ -50,7 +50,7 @@ public class RuleAssembler {
 	}
 	
 	// constructor for the rest of operators
-	public RuleAssembler(String operator, RelNode rel, ITupleSchema schema, int queryId, long timestampReference, WindowDefinition window, int windowOffset){
+	public RuleAssembler(String operator, RelNode rel, ITupleSchema schema, int queryId, long timestampReference, WindowDefinition window, int windowOffset, int windowBarrier){
 		this.operator = operator;
 		this.rel = rel;
 		this.schema1 = schema;
@@ -58,6 +58,7 @@ public class RuleAssembler {
 		this.queryId = queryId;		
 		this.timestampReference = timestampReference;
 		this.windowOffset = windowOffset;
+		this.windowBarrier =  windowBarrier;
 	}
 	
 	public SaberRule construct(){
@@ -65,7 +66,7 @@ public class RuleAssembler {
 		switch (operator){			
 			case PROJECT :			
 				System.out.println("==> Assembling Projection");
-				SaberProjectRule project = new SaberProjectRule(schema1, rel, queryId, timestampReference, window1, windowOffset);
+				SaberProjectRule project = new SaberProjectRule(schema1, rel, queryId, timestampReference, window1, windowOffset, windowBarrier);
 				project.prepareRule();				
 				return project;
 			case FILTER :

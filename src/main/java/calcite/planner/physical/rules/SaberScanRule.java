@@ -3,6 +3,8 @@ package calcite.planner.physical.rules;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.calcite.util.Pair;
+
 import calcite.planner.physical.SaberRule;
 import uk.ac.imperial.lsds.saber.ITupleSchema;
 import uk.ac.imperial.lsds.saber.Query;
@@ -108,8 +110,8 @@ public class SaberScanRule implements SaberRule {
 		return null;
 	}
 
-	public int getWindowOffset() {
-		return 0;
+	public Pair<Integer, Integer> getWindowOffset() {
+		return new Pair<Integer, Integer>(0,0);
 	}
 	
 }

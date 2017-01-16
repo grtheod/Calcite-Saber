@@ -122,7 +122,7 @@ public class SaberJoinRule implements SaberRule{
 		return window2;
 	}
 
-	public int getWindowOffset() {
-		return 0;
+	public Pair<Integer, Integer> getWindowOffset() {
+		return new Pair<Integer, Integer>(0,0);
 	}
 }
