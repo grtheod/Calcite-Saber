@@ -257,9 +257,18 @@ public class SaberRuleSets {
 			    // Run this optimization early, since it is expanding the operator pipeline.
 				AggregateExpandDistinctAggregatesRule.INSTANCE,
 				
-				// 2. Run exhaustive PPD, add not null filters, transitive inference,
+		        // 2. Merge, remove and reduce Project if possible
+				ProjectRemoveRule.INSTANCE,
+				ProjectWindowTransposeRule.INSTANCE, 
+				ProjectMergeRule.INSTANCE,
+				//maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
+		        ProjectTableScanRule.INSTANCE,
+				
+				// 3. Run exhaustive PPD, add not null filters, transitive inference,
 		        // constant propagation, constant folding
 				FilterMergeRule.INSTANCE,
+				FilterAggregateTransposeRule.INSTANCE,
+				FilterProjectTransposeRule.INSTANCE,
 				//FilterPushThroughFilter.INSTANCE,				
 				FilterJoinRule.FILTER_ON_JOIN, // add support for WHERE style Joins with the following three rules
 				FilterJoinRule.JOIN,
@@ -274,14 +283,7 @@ public class SaberRuleSets {
 				AggregateProjectPullUpConstantsRule.INSTANCE,
 				AggregateReduceFunctionsRule.INSTANCE, 
 				AggregateRemoveRule.INSTANCE,				
-				
-		        // 3. Merge, remove and reduce Project if possible
-				ProjectRemoveRule.INSTANCE,
-				ProjectWindowTransposeRule.INSTANCE, 
-				ProjectMergeRule.INSTANCE,
-				//maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
-		        ProjectTableScanRule.INSTANCE,
-				
+								
 			   	// 4. Prune empty result rules				
 				PruneEmptyRules.FILTER_INSTANCE,
 				PruneEmptyRules.PROJECT_INSTANCE,
