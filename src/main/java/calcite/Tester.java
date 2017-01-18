@@ -39,14 +39,14 @@ public class Tester {
 
 	public static void main(String[] args) throws Exception {
 		
-		int circularBufferSize = 32 * 1048576;
+		int circularBufferSize = 2 * 1048576;
 		boolean latencyOn = false;
 		SchedulingPolicy schedulingPolicy = SystemConf.SchedulingPolicy.HLS;
 		int switchThreshold = 10;
 		long throughputMonitorInterval = 1000L;
 		int partialWindows = 64;
 		int hashTableSize = 16*32768;
-		int unboundedBufferSize = 2 * 1048576;
+		int unboundedBufferSize = 1048576;
 		int threads = 1;
 		
 		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
