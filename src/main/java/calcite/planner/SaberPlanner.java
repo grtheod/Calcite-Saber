@@ -110,10 +110,12 @@ public class SaberPlanner {
   private final Planner planner;
   private final boolean greedyJoinOrder;
   private final boolean useRatesCostModel;
+  private final boolean noOptimization;
   
-  public SaberPlanner(SchemaPlus schema, boolean greedyJoinOrder, boolean useRatesCostModel) {
+  public SaberPlanner(SchemaPlus schema, boolean greedyJoinOrder, boolean useRatesCostModel, boolean noOptimization) {
 	this.greedyJoinOrder = greedyJoinOrder;
 	this.useRatesCostModel = useRatesCostModel;	
+	this.noOptimization = noOptimization;
     final List<RelTraitDef> traitDefs = new ArrayList<RelTraitDef>();
 
     traitDefs.add(ConventionTraitDef.INSTANCE);
@@ -127,18 +129,7 @@ public class SaberPlanner {
     		//AggregateJoinTransposeRule.INSTANCE		    	    
 
             //));
-    /*
-    if (greedyJoinOrder) {
-    	VOLCANO_RULES.removeAll(ImmutableList.of(
-    			JoinPushThroughJoinRule.LEFT, 
-                JoinPushThroughJoinRule.RIGHT,
-                JoinAssociateRule.INSTANCE,
-        	    JoinCommuteRule.INSTANCE));
-    	VOLCANO_RULES.addAll(ImmutableList.of(
-    			JoinToMultiJoinRule.INSTANCE,
-    			LoptOptimizeJoinRule.INSTANCE));
-    }*/
-    
+       
     if (useRatesCostModel) {
     	VOLCANO_RULES.addAll(ImmutableList.of(
         	    SaberLogicalProjectRule.INSTANCE,
@@ -150,11 +141,16 @@ public class SaberPlanner {
         	    AbstractConverter.ExpandConversionRule.INSTANCE
     			));
     	VOLCANO_RULES.addAll(SaberRuleSets.VOLCANO_RULES);
+    	if (!greedyJoinOrder) {   		
+    		VOLCANO_RULES.addAll(SaberRuleSets.EXHAUSTIVE_JOIN_ORDERING_RULES_FOR_RATE);
+    		VOLCANO_RULES.remove(SaberRuleSets.SABER_PROJECT_MERGE_RULE); 
+    	}
     } else {
     	VOLCANO_RULES.addAll(SaberRuleSets.PRE_JOIN_ORDERING_RULES);
+    	if (!greedyJoinOrder)     		
+    		VOLCANO_RULES.addAll(SaberRuleSets.EXHAUSTIVE_JOIN_ORDERING_RULES);
     }
-
-    
+      
     Program program =Programs.ofRules(VOLCANO_RULES);
     SaberRelOptCostFactory saberCostFactory = (useRatesCostModel) ? new SaberCostBase.SaberCostFactory() : null; //SaberCostFactory is custom factory with rates
 
@@ -215,87 +211,106 @@ public class SaberPlanner {
 
 
   public RelNode getLogicalPlan(String query) throws ValidationException, RelConversionException {
-    SqlNode sqlNode;
+	    SqlNode sqlNode;
 
-    try {
-      sqlNode = planner.parse(query);
-    } catch (SqlParseException e) {
-      throw new RuntimeException("Query parsing error.", e);
-    }
+	    try {
+	      sqlNode = planner.parse(query);
+	    } catch (SqlParseException e) {
+	      throw new RuntimeException("Query parsing error.", e);
+	    }
 
-    SqlNode validatedSqlNode = validateNode(sqlNode);
-    RelNode convertedNode = planner.convert(validatedSqlNode); 
-
-    // Optimization Phase 1
-    System.out.println("Optimization Phase 1 : Applying Window Rewrite rules with HepPlanner...");
-    ImmutableList<RelOptRule> windowRewriteRules = SaberRuleSets.WINDOW_REWRITE_RULES;
-    RelNode preOptimizationNode = hepOptimization(convertedNode, HepMatchOrder.BOTTOM_UP,
-    		windowRewriteRules.toArray(new RelOptRule[windowRewriteRules.size()]) );
-    
-    // Optimization Phase 2
-    System.out.println("Optimization Phase 2 : Applying heuristic rules that don't use the cost model with HepPlanner...");
-    ImmutableList<RelOptRule> preVolcanoStaticRules = SaberRuleSets.PRE_VOLCANO_STATIC_RULES;
-    RelNode preVolcanoNode = hepOptimization(preOptimizationNode, HepMatchOrder.BOTTOM_UP,
-    		preVolcanoStaticRules.toArray(new RelOptRule[preVolcanoStaticRules.size()]) );
-    
-    //System.out.println (RelOptUtil.toString (preVolcanoNode, SqlExplainLevel.ALL_ATTRIBUTES));
-    // Optimization Phase 3
-    //RelTraitSet traitSet = beforeplan.getTraitSet();
-    //traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
-    System.out.println("Optimization Phase 3 : Applying cost-based rules that use the cost model with VolcanoPlanner...");
-    RelTraitSet traitSet = (useRatesCostModel) ? planner.getEmptyTraitSet().replace(SaberRel.SABER_LOGICAL)
-    		: planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);	
-    RelNode volcanoPlan = planner.transform(0, traitSet, preVolcanoNode);       
-    
-    //System.out.println (RelOptUtil.toString (volcanoPlan, SqlExplainLevel.ALL_ATTRIBUTES));
-    // Optimization Phase 4
-    System.out.println("Optimization Phase 4 : Applying heuristic rules for Join ordering with HepPlanner...");
-    ImmutableList<RelOptRule> heuristicJoinOrderingRules = (useRatesCostModel) ? SaberRuleSets.HEURISTIC_JOIN_ORDERING_RULES_2
-    		: SaberRuleSets.HEURISTIC_JOIN_ORDERING_RULES;
-    RelNode afterJoinNode = hepOptimization(volcanoPlan, HepMatchOrder.BOTTOM_UP,
-    		heuristicJoinOrderingRules.toArray(new RelOptRule[heuristicJoinOrderingRules.size()]) );        
-
-    // Print here the final Cost
-    //System.out.println (RelOptUtil.toString (afterJoinNode, SqlExplainLevel.ALL_ATTRIBUTES));
-    RelNode finalPlan=null;
-    if (useRatesCostModel) {
-	    // Optimization Phase 5
-	    System.out.println("Optimization Phase 5 : Applying after Join heuristic rules with HepPlanner...");
-	    ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES_2;
-	    RelNode afterJoinPlan = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
-	    		afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
-    	
-	    // Print here the final Cost
-	    System.out.println ();
-	    System.out.println ("The optimal logical plan is:");
-	    System.out.println (RelOptUtil.toString (afterJoinPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+	    SqlNode validatedSqlNode = validateNode(sqlNode);
+	    RelNode convertedNode = planner.convert(validatedSqlNode); 
 	    
-	    // Optimization Phase 6
-	    System.out.println("Optimization Phase 6 : Applying heuristic rules that convert either Saber or Enumerable Convention operators to Logical with HepPlanner...");
-	    ImmutableList<RelOptRule> convertToLogicalRules = SaberRuleSets.CONVERT_TO_LOGICAL_RULES_2;
-	    finalPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP,
-	    		convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]) );	            
-    } else {
-        System.out.println("Optimization Phase 5 : Applying heuristic rules that convert either Saber or Enumerable Convention operators to Logical with HepPlanner...");
-        ImmutableList<RelOptRule> convertToLogicalRules = SaberRuleSets.CONVERT_TO_LOGICAL_RULES;
-        RelNode convertedLogicalNode = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
-        		convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]) );
-                
-        // Optimization Phase 6
-        System.out.println("Optimization Phase 6 : Applying after Join heuristic rules with HepPlanner...");
-        ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES;
-        finalPlan = hepOptimization(convertedLogicalNode, HepMatchOrder.BOTTOM_UP,
-        		afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
-        
-	    // Print here the final Cost
-        System.out.println ();
-        System.out.println ("The optimal logical plan is:");
-	    System.out.println (RelOptUtil.toString (finalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
-    }
-    
-    System.out.println("Returning plan...");    
-    return finalPlan;    
-  }  
+	    RelNode finalPlan=null;
+	    if (noOptimization) { //skip optimization rules
+	        // Optimization Phase 0
+	        System.out.println("Optimization Phase 0 : Applying rules required for converting the logical operators to physical...");        
+	        ImmutableList<RelOptRule> noOptimizationRules = SaberRuleSets.NO_OPTIMIZATION_RULES;
+	        finalPlan = hepOptimization(convertedNode, HepMatchOrder.BOTTOM_UP,
+	            noOptimizationRules.toArray(new RelOptRule[noOptimizationRules.size()]) );
+	        System.out.println("Skipping other optimization phases...");
+	        System.out.println ();
+	        System.out.println ("The optimal logical plan is:");
+	        System.out.println (RelOptUtil.toString (finalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+	        
+	    } else { // apply optimization rules
+	    	// Optimization Phase 1
+	    	System.out.println("Optimization Phase 1 : Applying Window Rewrite rules with HepPlanner...");
+	    	ImmutableList<RelOptRule> windowRewriteRules = SaberRuleSets.WINDOW_REWRITE_RULES;
+	    	RelNode preOptimizationNode = hepOptimization(convertedNode, HepMatchOrder.BOTTOM_UP,
+	    			windowRewriteRules.toArray(new RelOptRule[windowRewriteRules.size()]) );
+	      
+	    	// Optimization Phase 2
+	    	System.out.println("Optimization Phase 2 : Applying heuristic rules that don't use the cost model with HepPlanner...");
+	    	ImmutableList<RelOptRule> preVolcanoStaticRules = SaberRuleSets.PRE_VOLCANO_STATIC_RULES;
+	    	RelNode preVolcanoNode = hepOptimization(preOptimizationNode, HepMatchOrder.BOTTOM_UP,
+	    			preVolcanoStaticRules.toArray(new RelOptRule[preVolcanoStaticRules.size()]) );
+	      
+	    	//System.out.println (RelOptUtil.toString (preVolcanoNode, SqlExplainLevel.ALL_ATTRIBUTES));
+	    	// Optimization Phase 3
+	    	//RelTraitSet traitSet = beforeplan.getTraitSet();
+	    	//traitSet = traitSet.simplify(); // TODO: Is this the correct thing to do? Why relnode has a composite trait?
+	    	System.out.println("Optimization Phase 3 : Applying cost-based rules that use the cost model with VolcanoPlanner...");
+	    	RelTraitSet traitSet = (useRatesCostModel) ? planner.getEmptyTraitSet().replace(SaberRel.SABER_LOGICAL)
+	    			: planner.getEmptyTraitSet().replace(EnumerableConvention.INSTANCE);  
+	    	RelNode volcanoPlan = planner.transform(0, traitSet, preVolcanoNode);       
+	      
+	    	//System.out.println (RelOptUtil.toString (volcanoPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+	    	RelNode afterJoinNode;
+	    	if (greedyJoinOrder) {
+	    		// Optimization Phase 4
+	    		System.out.println("Optimization Phase 4 : Applying heuristic rules for Join ordering with HepPlanner...");
+	    		ImmutableList<RelOptRule> heuristicJoinOrderingRules = (useRatesCostModel) ? SaberRuleSets.HEURISTIC_JOIN_ORDERING_RULES_2
+	    				: SaberRuleSets.HEURISTIC_JOIN_ORDERING_RULES;
+	    		afterJoinNode = hepOptimization(volcanoPlan, HepMatchOrder.BOTTOM_UP,
+	    				heuristicJoinOrderingRules.toArray(new RelOptRule[heuristicJoinOrderingRules.size()]) );        
+	    	} else {
+	    		System.out.println("Skipping Optimization Phase 4. The Join ordering is chosen dynamically from the previous phase.");
+	    		afterJoinNode = volcanoPlan;
+	    	}
+	      
+	    	// Print here the final Cost
+	    	//System.out.println (RelOptUtil.toString (afterJoinNode, SqlExplainLevel.ALL_ATTRIBUTES));
+	    	if (useRatesCostModel) {
+	    		// Optimization Phase 5
+	    		System.out.println("Optimization Phase 5 : Applying after Join heuristic rules with HepPlanner...");
+	    		ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES_2;
+	    		RelNode afterJoinPlan = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
+	    				afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
+	        
+	    		// Print here the final Cost
+	    		System.out.println ();
+	    		System.out.println ("The optimal logical plan is:");
+	    		System.out.println (RelOptUtil.toString (afterJoinPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+	        
+	    		// Optimization Phase 6
+	    		System.out.println("Optimization Phase 6 : Applying heuristic rules that convert either Saber or Enumerable Convention operators to Logical with HepPlanner...");
+	    		ImmutableList<RelOptRule> convertToLogicalRules = SaberRuleSets.CONVERT_TO_LOGICAL_RULES_2;
+	    		finalPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP,
+	    				convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]) );              
+	    	} else {
+	    		System.out.println("Optimization Phase 5 : Applying heuristic rules that convert either Saber or Enumerable Convention operators to Logical with HepPlanner...");
+	    		ImmutableList<RelOptRule> convertToLogicalRules = SaberRuleSets.CONVERT_TO_LOGICAL_RULES;
+	    		RelNode convertedLogicalNode = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
+	    				convertToLogicalRules.toArray(new RelOptRule[convertToLogicalRules.size()]) );
+	                  
+	    		// Optimization Phase 6
+	    		System.out.println("Optimization Phase 6 : Applying after Join heuristic rules with HepPlanner...");
+	    		ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES;
+	    		finalPlan = hepOptimization(convertedLogicalNode, HepMatchOrder.BOTTOM_UP,
+	    				afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
+	        
+	    		// Print here the final Cost
+	    		System.out.println ();
+	    		System.out.println ("The optimal logical plan is:");
+	    		System.out.println (RelOptUtil.toString (finalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+	    	}
+	    }
+
+	    System.out.println("Returning plan...");    
+	    return finalPlan;    
+	  } 
   
   
   public SqlNode parseQuery(String sql) throws Exception {

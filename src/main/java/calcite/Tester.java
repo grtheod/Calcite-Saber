@@ -39,14 +39,14 @@ public class Tester {
 
 	public static void main(String[] args) throws Exception {
 		
-		int circularBufferSize = 2 * 1048576;
+		int circularBufferSize = 1024 * 1048576;
 		boolean latencyOn = false;
 		SchedulingPolicy schedulingPolicy = SystemConf.SchedulingPolicy.HLS;
 		int switchThreshold = 10;
 		long throughputMonitorInterval = 1000L;
 		int partialWindows = 64;
-		int hashTableSize = 16*32768;
-		int unboundedBufferSize = 1048576;
+		int hashTableSize = 1048576;
+		int unboundedBufferSize = 2 * 1048576;
 		int threads = 1;
 		
 		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
@@ -54,6 +54,12 @@ public class Tester {
 		
 		// execute determines whether the plan is executed or not
 		boolean execute = true;
+		
+		// greedyJoinOrder determines which rules will be chosen for the join ordering
+		boolean greedyJoinOrder = true;
+		
+		// noOptimization determines whether optimization rules will be applied or not
+		boolean noOptimization = false;
 		
 		/* Parse command line arguments */
 		int i, j;
@@ -94,6 +100,12 @@ public class Tester {
 			} else
 			if (args[i].equals("--execute")) { 
 				execute = Boolean.parseBoolean(args[j]);
+			} else
+			if (args[i].equals("--greedy-join-order")) { 
+				greedyJoinOrder = Boolean.parseBoolean(args[j]);
+			} else
+			if (args[i].equals("--no-optimization")) { 
+				noOptimization = Boolean.parseBoolean(args[j]);
 			}
 			else {
 				System.err.println(String.format("error: unknown flag %s %s", args[i], args[j]));
@@ -141,7 +153,7 @@ public class Tester {
 		 * @greedy is a boolean that defines if we want a greedy Join Reorder or not
 		 * @useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
 		 * */
-		SaberPlanner queryPlanner = new SaberPlanner(rootSchema, true, useRatesCostModel);
+		SaberPlanner queryPlanner = new SaberPlanner(rootSchema, greedyJoinOrder, useRatesCostModel, noOptimization);
 		
 		/* Until it is fixed, when joining two tables and then using group by, the attributes of group by predicate should be 
 		 * from the first table. For example:

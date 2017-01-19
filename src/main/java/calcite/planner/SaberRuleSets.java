@@ -120,14 +120,23 @@ public class SaberRuleSets {
 				JoinPushThroughJoinRule.LEFT,
 				JoinPushThroughJoinRule.RIGHT,
 				JoinAssociateRule.INSTANCE,
-				JoinCommuteRule.INSTANCE,
-				EnumerableRules.ENUMERABLE_FILTER_RULE,
-				EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-				EnumerableRules.ENUMERABLE_PROJECT_RULE,
-				EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
-				EnumerableRules.ENUMERABLE_JOIN_RULE,
-				EnumerableRules.ENUMERABLE_WINDOW_RULE
+				JoinCommuteRule.INSTANCE
 				);
+	
+	static final RelOptRule SABER_JOIN_PUSH_THROUGH_JOIN_RULE_RIGHT = new JoinPushThroughJoinRule("JoinPushThroughJoinRule", true, SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
+	
+	static final RelOptRule SABER_JOIN_PUSH_THROUGH_JOIN_RULE_LEFT = new JoinPushThroughJoinRule("JoinPushThroughJoinRule", false, SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
+
+	static final RelOptRule SABER_JOIN_COMMUTE_RULE = new JoinCommuteRule(SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER, false);
+		
+	
+	public static final ImmutableList <RelOptRule> EXHAUSTIVE_JOIN_ORDERING_RULES_FOR_RATE = 
+		ImmutableList.of(
+				SABER_JOIN_PUSH_THROUGH_JOIN_RULE_RIGHT,
+				SABER_JOIN_PUSH_THROUGH_JOIN_RULE_LEFT,
+				JoinAssociateRule.INSTANCE,
+				SABER_JOIN_COMMUTE_RULE
+				);			
 	
 	static final RelOptRule SABER_AGGREGATE_JOIN_TRANSPOSE_RULE = new AggregateJoinTransposeRule(SaberAggregateRel.class, 
 														SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER, false); //EXTENDED??
@@ -140,8 +149,6 @@ public class SaberRuleSets {
 	static final RelOptRule SABER_PROJECT_JOIN_TRANSPOSE_RULE = new ProjectJoinTransposeRule(PushProjector.ExprCondition.FALSE, SaberRelFactories.SABER_LOGICAL_BUILDER);
 	
 	static final RelOptRule SABER_PROJECT_MERGE_RULE = new ProjectMergeRule(true, SaberRelFactories.SABER_LOGICAL_PROJECT_FACTORY);
-
-	static final RelOptRule SABER_JOIN_COMMUTE_RULE = new JoinCommuteRule(SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER, false);
 	
 	public static final ImmutableList<RelOptRule> VOLCANO_RULES =
 		ImmutableList.of(
@@ -293,6 +300,13 @@ public class SaberRuleSets {
 															
 				);
 	
+	public static final ImmutableList<RelOptRule> NO_OPTIMIZATION_RULES =
+		ImmutableList.of(
+				ProjectToWindowRule.PROJECT,
+				FilterJoinRule.FILTER_ON_JOIN,
+				FilterJoinRule.JOIN,
+				ProjectMergeRule.INSTANCE // maybe remove this
+				);	
 	/**
 	 * Converter rule set that converts from Calcite logical convention to Saber physical convention.
 	 */
