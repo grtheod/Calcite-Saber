@@ -44,7 +44,7 @@ public class ExpressionBuilder {
 	    if (expression instanceof RexCall) {
 			List <Pair<RexNode, Expression>> operands = new ArrayList <Pair<RexNode, Expression>>();
 	        for (RexNode operand : ((RexCall) expression).getOperands()) {
-	        	System.out.println(operand);
+	        	//System.out.println(operand);
 	        	operands.add(getExpression(operand));	        	
 	        } 	   
 	        String operator = ((RexCall) expression).getOperator().toString();

@@ -33,19 +33,20 @@ public class SaberScanRule implements SaberRule {
 	int queryId;
 	Query query;
 	boolean flag;
+	int batchSize;
 	
-	public SaberScanRule(ITupleSchema schema, int queryId, long timestampReference, boolean flag) {
+	public SaberScanRule(ITupleSchema schema, int queryId, long timestampReference, boolean flag, int batchSize) {
 		this.schema = schema;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
 		this.flag = flag;
+		this.batchSize = batchSize;
 	}
 
 	public void prepareRule() {
 		//degenerate case : simple TableScan RelNode (select * from table).
 		if (flag) {
 			System.out.println("Degenerate case.");
-			int batchSize = 1048576;
 			WindowType windowType = WindowType.ROW_BASED;
 			int windowRange = 1;
 			int windowSlide = 1;

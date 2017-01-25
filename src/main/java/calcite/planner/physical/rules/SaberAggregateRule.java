@@ -40,25 +40,26 @@ public class SaberAggregateRule implements SaberRule{
 	int queryId = 0;
 	long timestampReference = 0;
 	int windowOffset = 0;
+	int batchSize;
 	
-	public SaberAggregateRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window){
+	public SaberAggregateRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window, int batchSize){
 		this.rel = rel;
 		this.schema = schema;
 		this.window = window;
 		this.queryId = queryId;
-		this.timestampReference = timestampReference;	
+		this.timestampReference = timestampReference;
+		this.batchSize = batchSize;
 	}
 	
 	public void prepareRule() {
 	
-		int batchSize = 1048576;
 		if ((window == null) || ((window.getSize()==1) && (window.getSlide()==1))) {
 			WindowType windowType = WindowType.ROW_BASED;
 			int windowRange = 1024;
 			int windowSlide = 1024;
 			window = new WindowDefinition (windowType, windowRange, windowSlide);
 		} 
-		System.out.println(window.toString());
+		System.out.println("Window is : " + window.getWindowType().toString() + " with " + window.toString());
 		LogicalAggregate aggregate = (LogicalAggregate) rel;
 		
 		QueryConf queryConf = new QueryConf (batchSize);

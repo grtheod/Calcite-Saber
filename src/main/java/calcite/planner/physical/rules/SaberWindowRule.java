@@ -42,18 +42,19 @@ public class SaberWindowRule implements SaberRule{
 	long timestampReference = 0;
 	int numberOfGroupByAttributes;
 	int windowBarrier=0;
+	int batchSize;
 	
-	public SaberWindowRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window){
+	public SaberWindowRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window, int batchSize){
 		this.rel = rel;
 		this.schema = schema;
 		this.window = window;
 		this.queryId = queryId;
-		this.timestampReference = timestampReference;	
+		this.timestampReference = timestampReference;
+		this.batchSize = batchSize;
 	}
 	
 	public void prepareRule() {
 	
-		int batchSize = 1048576;
 		int windowSlide = 1;
 		if (!(window == null))
 			windowSlide = (int) window.getSlide(); 
@@ -66,7 +67,7 @@ public class SaberWindowRule implements SaberRule{
 		QueryConf queryConf = new QueryConf (batchSize);
 		
 		window = new WindowDefinition (windowType, windowRange, windowSlide);		
-		System.out.println("window is : " + window.toString());
+		System.out.println("Window is : " + window.getWindowType().toString() + " with " + window.toString());
 		AggregationUtil aggrHelper = new AggregationUtil();
 		Pair<AggregationType [],FloatColumnReference []>  aggr = aggrHelper.getAggregationTypesAndAttributes(windowAgg.groups.get(0).getAggregateCalls(windowAgg));
 		AggregationType [] aggregationTypes = aggr.left;
@@ -82,13 +83,16 @@ public class SaberWindowRule implements SaberRule{
 		}
 		int inputAttrs = schema.numberOfAttributes();
 		for (int i = 0; i<inputAttrs; i++) {
-			System.out.println((schema.getAttributeName(i).toString()));
+			//System.out.println((schema.getAttributeName(i).toString()));
 			if ((schema.getAttributeName(i).contains("FLOOR")) || (schema.getAttributeName(i).contains("CEIL"))){
 					this.windowBarrier = i;
 					break;
 			}
 		}
-		System.out.println("aa"+this.windowBarrier);
+		if (windowBarrier == 0) 
+			windowBarrier++;
+		
+		System.out.println("The window barrier is:"+this.windowBarrier);
 		ImmutableBitSet limitedGroupSet = ImmutableBitSet.builder().addAll(limitedGroupByList).build();
 		Expression [] limitedGroupByAttributes = aggrHelper.getGroupByAttributes(limitedGroupSet, schema); 
 		System.out.println("The referenced columns of group by are: " + limitedGroupSet.toList().toString());
@@ -118,6 +122,9 @@ public class SaberWindowRule implements SaberRule{
 		int windowFrame = 0;
 		for ( RexLiteral con : constants) 
 			windowFrame += Integer.parseInt(con.toString());
+		// fix unbounded window range
+		if (windowFrame == 0)
+			windowFrame++;
 		return windowFrame;
 	}
 

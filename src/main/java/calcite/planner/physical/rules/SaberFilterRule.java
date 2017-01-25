@@ -35,18 +35,19 @@ public class SaberFilterRule implements SaberRule {
 	Query query;
 	int queryId = 0;
 	long timestampReference = 0;
+	int batchSize;
 	
-	public SaberFilterRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window){
+	public SaberFilterRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int batchSize){
 		this.rel = rel;
 		this.schema = schema;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
 		this.window = window;
+		this.batchSize = batchSize;
 	}
 	
 	public void prepareRule() {
 	
-		int batchSize = 1048576;
 		WindowType windowType = (window!=null) ? window.getWindowType() : WindowType.ROW_BASED;
 		long windowRange = (window!=null) ? window.getSize() : 1;
 		long windowSlide = (window!=null) ? window.getSlide() : 1;
@@ -71,7 +72,10 @@ public class SaberFilterRule implements SaberRule {
 		Set<QueryOperator> operators = new HashSet<QueryOperator>();
 		operators.add(operator);
 		
-		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);		
+		WindowDefinition filterWindow = new WindowDefinition (WindowType.ROW_BASED, 1, 1);
+		System.out.println("Window is : " + filterWindow.getWindowType().toString() + " with " + filterWindow.toString());
+		
+		query = new Query (queryId, operators, schema, filterWindow, null, null, queryConf, timestampReference);		
 		outputSchema = schema;			
 	}
 	

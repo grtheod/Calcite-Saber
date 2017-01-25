@@ -42,8 +42,9 @@ public class SaberProjectRule implements SaberRule {
 	long timestampReference = 0;
 	int windowOffset;
 	int windowBarrier;
+	int batchSize;
 	
-	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int windowOffset, int windowBarrier) {
+	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int windowOffset, int windowBarrier, int batchSize) {
 		this.schema = schema;
 		this.rel = rel;
 		this.queryId = queryId;
@@ -51,11 +52,11 @@ public class SaberProjectRule implements SaberRule {
 		this.windowOffset = windowOffset;
 		this.windowBarrier = windowBarrier;
 		this.window = window;
+		this.batchSize = batchSize;
 	}
 	
 	public void prepareRule() {
 	
-		int batchSize = 1048576;
 		WindowType windowType = (window!=null) ? window.getWindowType() : WindowType.ROW_BASED;
 		long windowRange = (window!=null) ? window.getSize() : 1;
 		long windowSlide = (window!=null) ? window.getSlide() : 1; //maybe keep the (1,1) window for project and filter??
@@ -86,6 +87,7 @@ public class SaberProjectRule implements SaberRule {
 				}				
 				if ((windowBarrier < 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalAggregate
 					column -= 1;
+				
 				if (schema.getAttributeType(column).equals(PrimitiveType.INT))
 					expressions[i] = new IntColumnReference (column);
 				else if (schema.getAttributeType(column).equals(PrimitiveType.FLOAT)) 
@@ -133,7 +135,10 @@ public class SaberProjectRule implements SaberRule {
 		Set<QueryOperator> operators = new HashSet<QueryOperator>();
 		operators.add(operator);
 			
-		query = new Query (queryId, operators, schema, window, null, null, queryConf, timestampReference);
+		WindowDefinition projectionWindow = new WindowDefinition (WindowType.ROW_BASED, 1, 1);
+		System.out.println("Window is : " + projectionWindow.getWindowType().toString() + " with " + projectionWindow.toString());
+		
+		query = new Query (queryId, operators, schema, projectionWindow, null, null, queryConf, timestampReference);
 		//resize the window according to possible changes from input
 		window = new WindowDefinition (windowType, windowRange, windowSlide);
 		//System.out.println(window.toString());

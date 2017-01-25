@@ -39,15 +39,16 @@ public class Tester {
 
 	public static void main(String[] args) throws Exception {
 		
-		int circularBufferSize = 1024 * 1048576;
+		int circularBufferSize =   256 * 1048576;
 		boolean latencyOn = false;
 		SchedulingPolicy schedulingPolicy = SystemConf.SchedulingPolicy.HLS;
 		int switchThreshold = 10;
 		long throughputMonitorInterval = 1000L;
-		int partialWindows = 64;
+		int partialWindows = 32768;
 		int hashTableSize = 1048576;
 		int unboundedBufferSize = 2 * 1048576;
 		int threads = 1;
+		int batchSize = 1048576;
 		
 		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
 		boolean useRatesCostModel = true;
@@ -106,7 +107,10 @@ public class Tester {
 			} else
 			if (args[i].equals("--no-optimization")) { 
 				noOptimization = Boolean.parseBoolean(args[j]);
-			}
+			} else
+			if (args[i].equals("--batch-size")) { 
+				batchSize = Integer.parseInt(args[j]);
+			}			
 			else {
 				System.err.println(String.format("error: unknown flag %s %s", args[i], args[j]));
 				System.exit(1);
@@ -191,7 +195,7 @@ public class Tester {
 		//System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));					
 	
 		long timestampReference = System.nanoTime();
-		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
+		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference, batchSize);
 		
 		physicalPlan.convert (logicalPlan);
 		

@@ -211,7 +211,7 @@ public class SaberPlanner {
 
 
   public RelNode getLogicalPlan(String query) throws ValidationException, RelConversionException {
-	    SqlNode sqlNode;
+	  SqlNode sqlNode;
 
 	    try {
 	      sqlNode = planner.parse(query);
@@ -310,7 +310,7 @@ public class SaberPlanner {
 
 	    System.out.println("Returning plan...");    
 	    return finalPlan;    
-	  } 
+  } 
   
   
   public SqlNode parseQuery(String sql) throws Exception {

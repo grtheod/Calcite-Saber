@@ -31,14 +31,16 @@ public class PhysicalRuleConverter {
 	List <SaberRule> aggregates = new ArrayList <SaberRule>();
 	long timestampReference;
 	int queryId;
+	int batchSize;
 	
-	public PhysicalRuleConverter (RelNode logicalPlan, Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap , SystemConf systemConf, long timestampReference) {		
+	public PhysicalRuleConverter (RelNode logicalPlan, Map<String, Pair<ITupleSchema,Pair<byte [],ByteBuffer>>> tablesMap , SystemConf systemConf, long timestampReference, int batchSize) {		
 		this.logicalPlan = logicalPlan;
 		this.tablesMap = tablesMap;
 		this.systemConf = systemConf;
 		this.chains = new HashMap<Integer,ChainOfRules>();
 		this.timestampReference = timestampReference;
 		this.queryId = 0;
+		this.batchSize = batchSize;
 	}
 	
 	public void convert(RelNode logicalPlan) {
@@ -64,7 +66,7 @@ public class PhysicalRuleConverter {
 		String tableKey = chainTail.getTable().getQualifiedName().toString().replace("[", "").replace("]", "").replace(", ", ".");
 		Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
 		queryId = 0;
-		RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), pair.left, queryId, timestampReference, true);	    
+		RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), pair.left, queryId, timestampReference, true, batchSize);	    
 		SaberRule rule = operation.construct();
 		Query query = rule.getQuery();
 		chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),pair.right.left,false,true,0,0));
@@ -99,7 +101,7 @@ public class PhysicalRuleConverter {
 			System.out.println(chainTail.getTable().getQualifiedName());
 			String tableKey = chainTail.getTable().getQualifiedName().toString().replace("[", "").replace("]", "").replace(", ", ".");
 			Pair<ITupleSchema,Pair<byte [],ByteBuffer>> pair = tablesMap.get(tableKey);
-			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), pair.left, queryId, timestampReference, false);
+			RuleAssembler operation = new RuleAssembler(chainTail.getRelTypeName(), pair.left, queryId, timestampReference, false, batchSize);
 													 //(chainTail.getRelTypeName(), null, pair.left, chainTail.getId(), timestampReference, null);	    
 			SaberRule rule = operation.construct();
 			Query query = rule.getQuery();
@@ -117,7 +119,7 @@ public class PhysicalRuleConverter {
 			//System.out.println(logicalPlan.getRelTypeName());
 			
 			ChainOfRules chain = chains.get(node.left);
-			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference, chain.getWindow(), chain.getWindowOffset(), chain.getWindowBarrier());
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference, chain.getWindow(), chain.getWindowOffset(), chain.getWindowBarrier(), batchSize);
 			SaberRule rule = operation.construct();
 		    
 			if ((logicalPlan.getRelTypeName().equals("LogicalAggregate")) || (logicalPlan.getRelTypeName().equals("LogicalWindow"))) {
@@ -156,7 +158,7 @@ public class PhysicalRuleConverter {
 			ChainOfRules rightChain = chains.get(rightNode.left);
 			
 			String args = logicalPlan.getChildExps().toString();
-			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference, leftChain.getWindow(), rightChain.getWindow());
+			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, leftChain.getOutputSchema(), rightChain.getOutputSchema(), queryId, timestampReference, leftChain.getWindow(), rightChain.getWindow(), batchSize);
 			SaberRule rule = operation.construct();
 			Query query = rule.getQuery();
 			System.out.println("Current query id : "+ query.getId());

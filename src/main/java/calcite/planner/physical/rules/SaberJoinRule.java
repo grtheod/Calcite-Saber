@@ -36,8 +36,9 @@ public class SaberJoinRule implements SaberRule{
 	Query query;
 	int queryId = 0;
 	long timestampReference = 0;
+	int batchSize;
 	
-	public SaberJoinRule(ITupleSchema schema1, ITupleSchema schema2, RelNode rel, int queryId, long timestampReference, WindowDefinition window1, WindowDefinition window2){
+	public SaberJoinRule(ITupleSchema schema1, ITupleSchema schema2, RelNode rel, int queryId, long timestampReference, WindowDefinition window1, WindowDefinition window2, int batchSize){
 		this.rel = rel;
 		this.schema1 = schema1;
 		this.schema2 = schema2;
@@ -45,11 +46,11 @@ public class SaberJoinRule implements SaberRule{
 		this.window2 = window2;
 		this.queryId = queryId;
 		this.timestampReference = timestampReference;
+		this.batchSize = batchSize;
 	}
 	
 	public void prepareRule() {
 
-		int batchSize = 1048576;
 		if ((window1 == null) || ((window1.getSize()==1) && (window1.getSlide()==1))) {
 			WindowType windowType1 = WindowType.ROW_BASED;
 			int windowRange1 = 1024;
@@ -63,8 +64,8 @@ public class SaberJoinRule implements SaberRule{
 			int windowSlide2 = 1024;
 			window2 = new WindowDefinition (windowType2, windowRange2, windowSlide2);
 		}
-		System.out.println("Window1 is : " + window1.toString());
-		System.out.println("Window2 is : " + window2.toString());
+		System.out.println("Window1 is : " + window1.getWindowType().toString() + " with " + window1.toString());
+		System.out.println("Window2 is : " + window2.getWindowType().toString() + " with " + window2.toString());
 		LogicalJoin join = (LogicalJoin) rel;
 		RexNode condition = join.getCondition();
 		

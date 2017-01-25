@@ -158,7 +158,7 @@ public class VolcanoTester {
 				.build();			
 	
 		long timestampReference = System.nanoTime();
-		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference);
+		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference,1048576);
 		physicalPlan.convert (logicalPlan);
 		
 	}

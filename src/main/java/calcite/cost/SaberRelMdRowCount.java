@@ -1,12 +1,19 @@
 package calcite.cost;
 
+import org.apache.calcite.plan.volcano.RelSubset;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.metadata.CyclicMetadataException;
 import org.apache.calcite.rel.metadata.ReflectiveRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMdRowCount;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.NumberUtil;
+import org.apache.calcite.util.Util;
 
 public class SaberRelMdRowCount extends RelMdRowCount{
 	  private static final SaberRelMdRowCount INSTANCE = new SaberRelMdRowCount();
@@ -26,4 +33,21 @@ public class SaberRelMdRowCount extends RelMdRowCount{
 	  public Double getRowCount(Filter rel) {
 	    return rel.getRows();
 	  }
+	  /*
+	  public Double getRowCount (RelSubset subset, RelMetadataQuery mq) {
+		  if (!Bug.CALCITE_1048_FIXED)
+			  return mq.getRowCount(Util.first(subset.getBest(), subset.getOriginal()));
+		  Double v = null;
+		  for (RelNode r : subset.getRels()) {
+			  try {
+				  v = NumberUtil.min(v, mq.getRowCount(r));
+			  } catch (CyclicMetadataException e) {
+				  
+			  } catch (Throwable e) {
+				  e.printStackTrace();
+			  }
+		  }
+		  return Util.first(v, 1e6d);
+	  }
+	  */
 }
