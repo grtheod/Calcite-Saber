@@ -86,7 +86,8 @@ public class PredicateUtil {
 	    		}	    		
 	    		tempOper2 = tempOper2 - joinOffset; //using joinOffset to fix the second operand in the case of join
 	    		//System.out.println("operators after  "+tempOper1 +"  "+ tempOper2);
-
+	    		if (tempOper2 < 0) tempOper2=0; // sometimes if we have aggregate before and rowtime is not in group by, we get -1
+	    		
 	    		if(rex.getOperands().get(0).toString().contains("$")){
 	    			firstOp = new IntColumnReference(tempOper1);
 	    		}else {
@@ -100,7 +101,16 @@ public class PredicateUtil {
 	        	return new Pair<RexNode,IPredicate>(condition, new IntComparisonPredicate(comparisonOperator, firstOp, secondOp));
 	        }
 	    } else {    	
-	    	return new Pair<RexNode,IPredicate>(condition,null);
+	    	// fix the computation of true or false
+	    	if (condition.toString().equals("true")) {
+	    		IntExpression exp1 = new IntConstant(1);	    		
+	    		return new Pair<RexNode,IPredicate>(condition, new IntComparisonPredicate(EQUAL_OP, exp1, exp1));
+	    	} else
+	    	if (condition.toString().equals("false")) {
+	    		IntExpression exp1 = new IntConstant(1);	    		
+	    		return new Pair<RexNode,IPredicate>(condition, new IntComparisonPredicate(NONEQUAL_OP, exp1, exp1));
+	    	} else	    		
+	    		return new Pair<RexNode,IPredicate>(condition,null);
 	    }	
 	}		
 

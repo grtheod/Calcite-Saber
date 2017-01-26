@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.util.Pair;
@@ -22,6 +23,7 @@ import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntExpression;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntMultiplication;
 import uk.ac.imperial.lsds.saber.cql.expressions.ints.IntSubtraction;
 import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongColumnReference;
+import uk.ac.imperial.lsds.saber.cql.expressions.longs.LongExpression;
 
 public class ExpressionBuilder {
 
@@ -149,8 +151,16 @@ public class ExpressionBuilder {
 				return null;
         		//return new FloatSubtraction((FloatExpression)pair1.right,(FloatExpression) pair2.right);
         	} else
-    		if (operator.equals("*")) {    			
-    			return new FloatMultiplication((FloatExpression)pair1.right,(FloatExpression) pair2.right);
+    		if (operator.equals("*")) {
+    			Expression exp1 = pair1.right;
+    			if (exp1 instanceof LongExpression) 
+    				exp1= new FloatColumnReference(Integer.parseInt(pair1.right.toString().replace("\"", ""))+1);
+    			
+    			Expression exp2 = pair2.right;
+    			if (exp2 instanceof LongExpression)     			
+    				exp2= new FloatColumnReference(Integer.parseInt(pair2.right.toString().replace("\"", ""))+1);
+    			    			    			
+    			return new FloatMultiplication((FloatExpression)exp1,(FloatExpression) exp2);
     		} else
     		if (operator.equals("/")) {    			
     			return new FloatDivision((FloatExpression)pair1.right,(FloatExpression) pair2.right);
@@ -162,14 +172,17 @@ public class ExpressionBuilder {
 	}
 	
 	public int getWindowForPlan(){
-		String operator = ((RexCall) expression).getOperator().toString();
-    	if (operator.equals("FLOOR")) {
-    		return this.windowBorder = createWindow(((RexCall) expression).operands.get(1).toString().replace("FLAG(", "").replace(")", ""));
-        }
-    	if (operator.equals("CEIL")) { 
-    		return this.windowBorder = createWindow(((RexCall) expression).operands.get(1).toString().replace("FLAG(", "").replace(")", ""));
-        }
-    	return 0;
+		if (!(expression instanceof RexLiteral)) {
+			String operator = ((RexCall) expression).getOperator().toString();
+	    	if (operator.equals("FLOOR")) {
+	    		return this.windowBorder = createWindow(((RexCall) expression).operands.get(1).toString().replace("FLAG(", "").replace(")", ""));
+	        }
+	    	if (operator.equals("CEIL")) { 
+	    		return this.windowBorder = createWindow(((RexCall) expression).operands.get(1).toString().replace("FLAG(", "").replace(")", ""));
+	    	}
+		}		
+		
+		return 0;
 	}
 
 	public int getWindowBorder() {

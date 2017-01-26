@@ -273,12 +273,18 @@ public class SaberPlanner {
 	    	// Print here the final Cost
 	    	//System.out.println (RelOptUtil.toString (afterJoinNode, SqlExplainLevel.ALL_ATTRIBUTES));
 	    	if (useRatesCostModel) {
-	    		// Optimization Phase 5
-	    		System.out.println("Optimization Phase 5 : Applying after Join heuristic rules with HepPlanner...");
+	    		// Optimization Phase 5.a
+	    		System.out.println("Optimization Phase 5.a : Applying after Join heuristic rules with HepPlanner...");
 	    		ImmutableList<RelOptRule> afterJoinRules = SaberRuleSets.AFTER_JOIN_RULES_2;
 	    		RelNode afterJoinPlan = hepOptimization(afterJoinNode, HepMatchOrder.BOTTOM_UP,
 	    				afterJoinRules.toArray(new RelOptRule[afterJoinRules.size()]) );
 	        
+	    		// Optimization Phase 5.b
+	    		System.out.println("Optimization Phase 5.b : Applying after Join heuristic rules with HepPlanner...");
+	    		ImmutableList<RelOptRule> afterJoinRules2 = SaberRuleSets.PROJECT_PUSH_DOWN;
+	    		afterJoinPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP,
+	    				afterJoinRules2.toArray(new RelOptRule[afterJoinRules.size()]) );
+	    		
 	    		// Print here the final Cost
 	    		System.out.println ();
 	    		System.out.println ("The optimal logical plan is:");

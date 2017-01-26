@@ -139,7 +139,7 @@ public class SaberRuleSets {
 				);			
 	
 	static final RelOptRule SABER_AGGREGATE_JOIN_TRANSPOSE_RULE = new AggregateJoinTransposeRule(SaberAggregateRel.class, 
-														SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER, false); //EXTENDED??
+														SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER, true); //EXTENDED??
 	static final RelOptRule SABER_FILTER_AGGREGATE_TRANSPOSE_RULE = new FilterAggregateTransposeRule(SaberFilterRel.class, 
 														SaberRelFactories.SABER_LOGICAL_BUILDER, SaberAggregateRel.class);
 	static final RelOptRule SABER_FILTER_PROJECT_TRANSPOSE_RULE = new FilterProjectTransposeRule(SaberFilterRel.class, SaberProjectRel.class, true, true,
@@ -176,10 +176,10 @@ public class SaberRuleSets {
 	public static final ImmutableList<RelOptRule> HEURISTIC_JOIN_ORDERING_RULES_2 =
 			ImmutableList.of(
 						SABER_JOIN_TO_MULTIJOIN_RULE ,
-						SABER_LOPT_OPTIMIZE_JOIN_RULE,
-						ProjectRemoveRule.INSTANCE,
-						SABER_PROJECT_MERGE_RULE,
-						SABER_PROJECT_JOIN_TRANSPOSE_RULE
+						SABER_LOPT_OPTIMIZE_JOIN_RULE
+						//ProjectRemoveRule.INSTANCE,
+						//SABER_PROJECT_MERGE_RULE,
+						//SABER_PROJECT_JOIN_TRANSPOSE_RULE
 					);
 	
 	//These rules produce bushy joins
@@ -193,42 +193,51 @@ public class SaberRuleSets {
 		ImmutableList.of(
 				// 1. Run other optimizations that do not need stats
 				JoinPushExpressionsRule.INSTANCE,
-				ProjectRemoveRule.INSTANCE,
-				ProjectMergeRule.INSTANCE,
 				AggregateProjectMergeRule.INSTANCE,
-				//ProjectJoinTransposeRule.INSTANCE, !!
+				ProjectJoinTransposeRule.INSTANCE,
 				//ProjectJoinRemoveRule.INSTANCE,
 				//JoinCommuteRule.INSTANCE,
 			        
 		        // 2. Run aggregate-join transpose (cost based)
-				//AggregateJoinTransposeRule.INSTANCE,
+				AggregateJoinTransposeRule.EXTENDED,
 
 		        // 3. Run rule to fix windowing issue when it is done over aggregation columns
 				//ProjectToWindowRule.PROJECT,
-				ProjectWindowTransposeRule.INSTANCE
+				ProjectWindowTransposeRule.INSTANCE,
+				ProjectRemoveRule.INSTANCE,
+				ProjectMergeRule.INSTANCE
+				
 				);		
 
 	static final RelOptRule SABER_JOIN_PUSH_EXPRESSIONS_RULE = new JoinPushExpressionsRule(SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
 	
 	static final RelOptRule SABER_AGGREGATE_PROJECT_MERGE_RULE = new AggregateProjectMergeRule(SaberAggregateRel.class, SaberProjectRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
-	
+		
 	public static final ImmutableList<RelOptRule> AFTER_JOIN_RULES_2=
 			ImmutableList.of(
 					// 1. Run other optimizations that do not need stats
 					SABER_JOIN_PUSH_EXPRESSIONS_RULE,
-					ProjectRemoveRule.INSTANCE,
-					SABER_PROJECT_MERGE_RULE,
-					SABER_AGGREGATE_PROJECT_MERGE_RULE
-					//ProjectJoinTransposeRule.INSTANCE, !!
+					SABER_AGGREGATE_PROJECT_MERGE_RULE,
 					//ProjectJoinRemoveRule.INSTANCE,
 					//JoinCommuteRule.INSTANCE,
 				        
 			        // 2. Run aggregate-join transpose (cost based)
-					//AggregateJoinTransposeRule.INSTANCE,
+					SABER_AGGREGATE_JOIN_TRANSPOSE_RULE,
 
 			        // 3. Run rule to fix windowing issue when it is done over aggregation columns
 					//ProjectToWindowRule.PROJECT,
 					//ProjectWindowTransposeRule.INSTANCE
+					
+					//SABER_PROJECT_JOIN_TRANSPOSE_RULE,
+					ProjectRemoveRule.INSTANCE,
+					SABER_PROJECT_MERGE_RULE
+					);	
+
+	public static final ImmutableList<RelOptRule> PROJECT_PUSH_DOWN =
+			ImmutableList.of(
+					SABER_PROJECT_JOIN_TRANSPOSE_RULE,
+					ProjectRemoveRule.INSTANCE,
+					SABER_PROJECT_MERGE_RULE
 					);	
 	
 	public static final ImmutableList<RelOptRule> CONVERT_TO_LOGICAL_RULES =
@@ -303,8 +312,8 @@ public class SaberRuleSets {
 	public static final ImmutableList<RelOptRule> NO_OPTIMIZATION_RULES =
 		ImmutableList.of(
 				ProjectToWindowRule.PROJECT,
-				FilterJoinRule.FILTER_ON_JOIN,
-				FilterJoinRule.JOIN,
+				//FilterJoinRule.FILTER_ON_JOIN,
+				//FilterJoinRule.JOIN,
 				ProjectMergeRule.INSTANCE // maybe remove this
 				);	
 	/**

@@ -78,7 +78,7 @@ public class SaberWindowRule implements SaberRule{
 		// exclude rowtime, floor and ceil from group by attributes
 		List<Integer> limitedGroupByList = new ArrayList<Integer>();
 		for ( Integer groupby : windowAgg.groups.get(0).keys){
-			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && !(schema.getAttributeName(groupby).contains("CEIL")) )
+			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("rowcount")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && !(schema.getAttributeName(groupby).contains("CEIL")) )
 				limitedGroupByList.add(groupby);
 		}
 		int inputAttrs = schema.numberOfAttributes();
