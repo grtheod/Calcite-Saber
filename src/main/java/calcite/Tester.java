@@ -44,7 +44,7 @@ public class Tester {
 		SchedulingPolicy schedulingPolicy = SystemConf.SchedulingPolicy.HLS;
 		int switchThreshold = 10;
 		long throughputMonitorInterval = 1000L;
-		int partialWindows = 32768;
+		int partialWindows = 65536;
 		int hashTableSize = 1048576;
 		int unboundedBufferSize = 2 * 1048576;
 		int threads = 1;

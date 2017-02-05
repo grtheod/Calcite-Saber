@@ -218,14 +218,14 @@ public class PhysicalRuleConverter {
 				for (Map.Entry<Integer,ChainOfRules> c : chains.entrySet()){						
 					if(c.getValue().getIsFirst()) {
 						if(c.getValue().getFlag() == false) {
-							application.processData (c.getValue().getData());							
+							application.processData (c.getValue().query.getId(),c.getValue().getData());							
 						} else {
 							/*the first case doesn't work.*/
 							if(c.getValue().getHasMore() == true) {
-								application.processSecondStream (c.getValue().getData());
+								application.processSecondStream (c.getValue().query.getId() ,c.getValue().getData());
 							} else {
-								application.processFirstStream  (c.getValue().getData());
-								application.processSecondStream (c.getValue().getData2());
+								application.processFirstStream  (c.getValue().query.getId(), c.getValue().getData());
+								application.processSecondStream (c.getValue().query.getId(), c.getValue().getData2());
 							}
 						}
 					}					
