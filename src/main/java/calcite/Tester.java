@@ -60,7 +60,7 @@ public class Tester {
 		boolean greedyJoinOrder = true;
 		
 		// noOptimization determines whether optimization rules will be applied or not
-		boolean noOptimization = false;
+		boolean noOptimization = true;
 		
 		/* Parse command line arguments */
 		int i, j;

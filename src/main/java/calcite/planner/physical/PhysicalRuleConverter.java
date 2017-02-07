@@ -221,7 +221,7 @@ public class PhysicalRuleConverter {
 							application.processData (c.getValue().query.getId(),c.getValue().getData());							
 						} else {
 							/*the first case doesn't work.*/
-							if(c.getValue().getHasMore() == true) {
+							if(c.getValue().getHasMore() == false) {
 								application.processSecondStream (c.getValue().query.getId() ,c.getValue().getData());
 							} else {
 								application.processFirstStream  (c.getValue().query.getId(), c.getValue().getData());
@@ -230,6 +230,7 @@ public class PhysicalRuleConverter {
 						}
 					}					
 				}
+				Thread.sleep(100);
 				if (systemConf.LATENCY_ON){
 					//b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1L));
 				}
