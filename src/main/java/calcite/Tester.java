@@ -46,7 +46,7 @@ public class Tester {
 		long throughputMonitorInterval = 1000L;
 		int partialWindows = 65536;
 		int hashTableSize = 1048576;
-		int unboundedBufferSize = 2 * 1048576;
+		int unboundedBufferSize = 128 * 1048576;
 		int threads = 1;
 		int batchSize = 1048576;
 		
@@ -61,6 +61,9 @@ public class Tester {
 		
 		// noOptimization determines whether optimization rules will be applied or not
 		boolean noOptimization = true;
+		
+		// compute all plans
+		boolean allPlans =  false;
 		
 		/* Parse command line arguments */
 		int i, j;
@@ -110,6 +113,9 @@ public class Tester {
 			} else
 			if (args[i].equals("--batch-size")) { 
 				batchSize = Integer.parseInt(args[j]);
+			} else
+			if (args[i].equals("--all-plans")) { 
+				allPlans = Boolean.parseBoolean(args[j]);
 			}			
 			else {
 				System.err.println(String.format("error: unknown flag %s %s", args[i], args[j]));
@@ -152,12 +158,6 @@ public class Tester {
 						.build();
 		
 		Statement statement = connection.createStatement();
-		/*QueryPlanner is a combination of both Volcano and heuristic planner.*/
-		/*QueryPlanner's constructor needs (Schema, greedy, useRatesCostModel).
-		 * @greedy is a boolean that defines if we want a greedy Join Reorder or not
-		 * @useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
-		 * */
-		SaberPlanner queryPlanner = new SaberPlanner(rootSchema, greedyJoinOrder, useRatesCostModel, noOptimization);
 		
 		/* Until it is fixed, when joining two tables and then using group by, the attributes of group by predicate should be 
 		 * from the first table. For example:
@@ -184,24 +184,46 @@ public class Tester {
 			else
 				break;
 			}
-		RelNode logicalPlan = queryPlanner.getLogicalPlan (query);
 		
-//		RelNode logicalPlan = queryPlanner.getLogicalPlan (
-//             "select rowtime, sum(units), count(orderid) "
-//             + "from  s.orders "         
-//             + "group by rowtime,units,orderid, floor(rowtime to second)" 
-//             );
+		/*SaberPlanner is a combination of both Volcano and heuristic planner.*/
+		/*SaberPlanner's constructor needs (Schema, greedy, useRatesCostModel, noOptimization).
+		 * @greedy is a boolean that defines if we want a greedy Join Reorder or not
+		 * @useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
+		 * @noOptimization is a boolean that defines if we want to use the optimization or not
+		 * */
+		if (allPlans == true ){
+			// Not optimized plan
+			SaberPlanner queryPlanner1 = new SaberPlanner(rootSchema, greedyJoinOrder, useRatesCostModel, true);
+			RelNode logicalPlan1 = queryPlanner1.getLogicalPlan (query);
+			
+			// Optimized Plan with built-in cost model
+			SaberPlanner queryPlanner2 = new SaberPlanner(rootSchema, greedyJoinOrder, false, false);
+			RelNode logicalPlan2 = queryPlanner2.getLogicalPlan (query);
+			
+			// Optimized Plan with rate-based cost model
+			SaberPlanner queryPlanner3 = new SaberPlanner(rootSchema, greedyJoinOrder, true, false);
+			RelNode logicalPlan3 = queryPlanner3.getLogicalPlan (query);			
+		}
+		else{
+			SaberPlanner queryPlanner = new SaberPlanner(rootSchema, greedyJoinOrder, useRatesCostModel, noOptimization);
+			RelNode logicalPlan = queryPlanner.getLogicalPlan (query);
+			
+			// RelNode logicalPlan = queryPlanner.getLogicalPlan (
+			// 	"select rowtime, sum(units), count(orderid) "
+			//  + "from  s.orders "         
+			//  + "group by rowtime,units,orderid, floor(rowtime to second)" 
+			//  );
+			
+			//System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));					
 		
-		//System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));					
-	
-		long timestampReference = System.nanoTime();
-		PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference, batchSize);
-		
-		physicalPlan.convert (logicalPlan);
-		
-		if (execute)
-			physicalPlan.execute();
-		
+			long timestampReference = System.nanoTime();
+			PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference, batchSize);
+			
+			physicalPlan.convert (logicalPlan);
+			
+			if (execute)
+				physicalPlan.execute();
+		}
 		/*
 		 * Notes:
 		 * 
