@@ -46,8 +46,8 @@ public class Tester {
 		long throughputMonitorInterval = 1000L;
 		int partialWindows = 65536;
 		int hashTableSize = 1048576;
-		int unboundedBufferSize = 128 * 1048576;
-		int threads = 1;
+		int unboundedBufferSize = 360 * 1048576;
+		int threads = 2;
 		int batchSize = 1048576;
 		
 		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
@@ -60,7 +60,7 @@ public class Tester {
 		boolean greedyJoinOrder = true;
 		
 		// noOptimization determines whether optimization rules will be applied or not
-		boolean noOptimization = true;
+		boolean noOptimization = false;
 		
 		// compute all plans
 		boolean allPlans =  false;
@@ -154,7 +154,7 @@ public class Tester {
 		
 		/* Create a schema in Saber from a given SchemaPlus and add some mock data for testing.*/
 		DataGenerator dataGenerator = new DataGenerator()
-						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(8192, 32768, 32768, 4096, 16384)))
+						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(819, 3276, 3276, 409, 3276)))
 						.build();
 		
 		Statement statement = connection.createStatement();

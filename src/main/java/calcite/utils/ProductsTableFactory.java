@@ -28,12 +28,12 @@ public class ProductsTableFactory implements TableFactory<Table>  {
 	
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
-		    {ts(10,15,0), 3, "paint"},
-		    {ts(10,15,0), 7, "paper"},
-		    {ts(10,15,0), 1, "brush"},
-		    {ts(10,15,0), 9, "paint"},
-		    {ts(10,15,0), 10, "paint"},
-		    {ts(10,15,0), 8, "crate"}
+		    {ts(10,15,0), 3, "paint", 3},
+		    {ts(10,15,0), 7, "paper", 3},
+		    {ts(10,15,0), 1, "brush", 3},
+		    {ts(10,15,0), 9, "paint", 3},
+		    {ts(10,15,0), 10, "paint", 3},
+		    {ts(10,15,0), 8, "crate", 3}
 		};
 		return new ProductsTable(ImmutableList.copyOf(rows), useRatesCostModel);
 	}
@@ -50,6 +50,7 @@ public class ProductsTableFactory implements TableFactory<Table>  {
 		        	.add("rowtime", SqlTypeName.TIMESTAMP)
 		            .add("productid", SqlTypeName.INTEGER)
 		            .add("description", SqlTypeName.INTEGER)
+		            .add("price", SqlTypeName.FLOAT)
 		            .build();
 			}	
 		};

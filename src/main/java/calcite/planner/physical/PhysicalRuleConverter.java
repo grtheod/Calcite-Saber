@@ -230,7 +230,7 @@ public class PhysicalRuleConverter {
 						}
 					}					
 				}
-				Thread.sleep(100);
+				Thread.sleep(9);
 				if (systemConf.LATENCY_ON){
 					//b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1L));
 				}
