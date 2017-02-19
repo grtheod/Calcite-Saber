@@ -1,41 +1,28 @@
-package calcite;
+package calcite.LRB;
 
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Scanner;
 
 import org.apache.calcite.jdbc.CalciteConnection;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
-import org.apache.calcite.sql.SqlExplainLevel;
 
-import calcite.planner.QueryPlanner;
 import calcite.planner.SaberPlanner;
 import calcite.planner.physical.PhysicalRuleConverter;
 import calcite.planner.physical.SystemConfig;
-import calcite.utils.CustomersTableFactory;
 import calcite.utils.DataGenerator;
-import calcite.utils.OrdersDeliveryTableFactory;
-import calcite.utils.OrdersTableFactory;
-import calcite.utils.PaymentsTableFactory;
-import calcite.utils.ProductsTableFactory;
+import calcite.utils.PosSpeedStrTableFactory;
 import uk.ac.imperial.lsds.saber.SystemConf;
 import uk.ac.imperial.lsds.saber.SystemConf.SchedulingPolicy;
 
-public class Tester {
+public class LRBTester {
 	
-	public static final String usage = "usage: Tester for the system";
+	public static final String usage = "usage: Tester for LRB";
 
 	public static void main(String[] args) throws Exception {
 		
@@ -169,32 +156,14 @@ public class Tester {
 		
 		SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
 		
-		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null, useRatesCostModel));
-		schema.add("orders", new OrdersTableFactory().create(schema, "orders", null, null, useRatesCostModel));
-		schema.add("orders_delivery", new OrdersDeliveryTableFactory().create(schema, "orders_delivery", null, null, useRatesCostModel));				
-		schema.add("payments", new PaymentsTableFactory().create(schema, "payments", null, null, useRatesCostModel));		
-		schema.add("products", new ProductsTableFactory().create(schema, "products", null, null, useRatesCostModel));
-		
-		/* Create a schema in Saber from a given SchemaPlus and add some mock data for testing.*/
+		schema.add("PosSpeedStr", new PosSpeedStrTableFactory().create(schema, "PosSpeedStr", null, null, useRatesCostModel));
 		DataGenerator dataGenerator = new DataGenerator()
 						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(819, 3276, 3276, 409, 3276)))
 						.build();
 		
 		Statement statement = connection.createStatement();
+
 		
-		/* Until it is fixed, when joining two tables and then using group by, the attributes of group by predicate should be 
-		 * from the first table. For example:
-		 * ...
-		 * FROM table1,table2,...
-		 * WHERE table1.attrx = table2.attry AND ...
-		 * ...
-		 * GROUP BY table1.attrx, ... 
-		 * ... 
-		 * */
-		/* Recall that a default window is a now-window, i. e., a time-based window of size 1.*/	
-		/* We recommend that you always include the rowtime column in the SELECT clause. Having a sorted 
-		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
-		 * such as GROUP BY and JOIN */
 		String query;
 		if (waitForQuery == false) {
 			query = paramQuery;
@@ -212,12 +181,8 @@ public class Tester {
 					break;
 			}
 		}
-		/*SaberPlanner is a combination of both Volcano and heuristic planner.*/
-		/*SaberPlanner's constructor needs (Schema, greedy, useRatesCostModel, noOptimization).
-		 * @greedy is a boolean that defines if we want a greedy Join Reorder or not
-		 * @useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
-		 * @noOptimization is a boolean that defines if we want to use the optimization or not
-		 * */
+
+		
 		if (allPlans == true ){
 			// Not optimized plan
 			SaberPlanner queryPlanner1 = new SaberPlanner(rootSchema, greedyJoinOrder, useRatesCostModel, true);
@@ -230,11 +195,7 @@ public class Tester {
 			// Optimized Plan with rate-based cost model			
 			rootSchema = calciteConnection.getRootSchema();
 			schema = rootSchema.add("s", new AbstractSchema());
-			schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null, true));
-			schema.add("orders", new OrdersTableFactory().create(schema, "orders", null, null, true));
-			schema.add("orders_delivery", new OrdersDeliveryTableFactory().create(schema, "orders_delivery", null, null, true));				
-			schema.add("payments", new PaymentsTableFactory().create(schema, "payments", null, null, true));		
-			schema.add("products", new ProductsTableFactory().create(schema, "products", null, null, true));
+			schema.add("PosSpeedStr", new PosSpeedStrTableFactory().create(schema, "PosSpeedStr", null, null, useRatesCostModel));
 			dataGenerator = new DataGenerator()
 							.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(819, 3276, 3276, 409, 3276)))
 							.build();
@@ -244,14 +205,7 @@ public class Tester {
 		else{
 			SaberPlanner queryPlanner = new SaberPlanner(rootSchema, greedyJoinOrder, useRatesCostModel, noOptimization);
 			RelNode logicalPlan = queryPlanner.getLogicalPlan (query);
-			
-			// RelNode logicalPlan = queryPlanner.getLogicalPlan (
-			// 	"select rowtime, sum(units), count(orderid) "
-			//  + "from  s.orders "         
-			//  + "group by rowtime,units,orderid, floor(rowtime to second)" 
-			//  );
-			
-			//System.out.println (RelOptUtil.toString (logicalPlan, SqlExplainLevel.ALL_ATTRIBUTES));					
+							
 		
 			long timestampReference = System.nanoTime();
 			PhysicalRuleConverter physicalPlan = new PhysicalRuleConverter (logicalPlan, dataGenerator.getTablesMap(), sconf,timestampReference, batchSize);
@@ -262,32 +216,5 @@ public class Tester {
 			if (execute)
 				physicalPlan.execute(getThroughput);
 		}
-		/*
-		 * Notes:
-		 * 
-		 * main () {
-		 * 		
-		 * 		schema = ...
-		 * 		query = "select..."
-		 * 		
-		 * 		QueryPlanner planner = new QueryPlanner (schema)
-		 * 		RelNode logicalPlanRoot = planner.getLogicalPlan (query);
-		 * 		
-		 * 		PhysicalRuleConverter converter = new PhysicalRuleConverter (logicalPlanRoot);
-		 * 		QueryApplication saberApp = converter.convert ();
-		 * 		
-		 * 		RamdomDataGenerator generator = new RamdomDataGenerator ()
-		 * 			.setSchema (schema)
-		 * 			.setBundleSize(1024)
-		 * 			...
-		 * 		
-		 * 		// Set any system configuration parameters
-		 * 		saberApp.init ();
-		 * 		
-		 * 		while (true) {
-		 * 			saberApp.processData (generator.nextBundle())
-		 * 		}
-		 * }
-		 */
 	}
 }

@@ -92,7 +92,7 @@ public class ExpressionBuilder {
 					int column = Integer.parseInt(expression.toString().replace("$", ""));				
 					if (expression.getType().toString().equals("INTEGER"))
 						expr = new IntColumnReference (column);
-					else if (expression.getType().toString().equals("FLOAT"))
+					else if (expression.getType().toString().equals("FLOAT") || expression.getType().toString().equals("BIGINT")) //fix the average case
 						expr = new FloatColumnReference (column);
 					else
 						expr = new LongColumnReference (column);

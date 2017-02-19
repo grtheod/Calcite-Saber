@@ -190,11 +190,29 @@ public class PhysicalRuleConverter {
 	}
 	
 	
-	public void execute () {
+	public void execute (boolean getThroughput) {
 				
 		System.out.println("-------------------------------------------");
+		List<Integer> throughputList = new ArrayList<Integer>();
+		if (getThroughput) {
+			for (Map.Entry<Integer,ChainOfRules> c : chains.entrySet()){						
+				if(c.getValue().getIsFirst()) {
+					if(c.getValue().getFlag() == false) {
+						throughputList.add(c.getValue().query.getId());							
+					} else {
+						/*the first case doesn't work.*/
+						if(c.getValue().getHasMore() == false) {
+							throughputList.add(c.getValue().query.getId());	
+						} else {
+							throughputList.add(c.getValue().query.getId());	
+						}
+					}
+				}					
+			}
+			System.out.println(throughputList.toString());
+		}
 		
-		QueryApplication application = new QueryApplication(queries);		
+		QueryApplication application = new QueryApplication(queries, throughputList);		
 		application.setup();
 		
 		/* The path is query -> dispatcher -> handler -> aggregator */
