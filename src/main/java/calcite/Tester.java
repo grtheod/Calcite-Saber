@@ -51,7 +51,7 @@ public class Tester {
 		int batchSize = 1048576;
 		
 		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
-		boolean useRatesCostModel = false;
+		boolean useRatesCostModel = true;
 		
 		// execute determines whether the plan is executed or not
 		boolean execute = true;
@@ -236,7 +236,8 @@ public class Tester {
 			schema.add("payments", new PaymentsTableFactory().create(schema, "payments", null, null, true));		
 			schema.add("products", new ProductsTableFactory().create(schema, "products", null, null, true));
 			dataGenerator = new DataGenerator()
-							.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(819, 3276, 3276, 409, 3276)))
+//							.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(819, 3276, 3276, 409, 3276)))
+							.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(420, 1635, 1635, 205, 1635)))
 							.build();
 			SaberPlanner queryPlanner3 = new SaberPlanner(rootSchema, greedyJoinOrder, true, false);
 			RelNode logicalPlan3 = queryPlanner3.getLogicalPlan (query);			

@@ -73,8 +73,8 @@ public class SaberAggregateRule implements SaberRule{
 		// exclude rowtime, floor and ceil from group by attributes
 		List<Integer> limitedGroupByList = new ArrayList<Integer>();
 		int i = 0;
-		for ( Integer groupby : aggregate.getGroupSet()){ // maybe remove rowcount
-			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("rowcount")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && !(schema.getAttributeName(groupby).contains("CEIL")) )
+		for ( Integer groupby : aggregate.getGroupSet()){ 
+			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && !(schema.getAttributeName(groupby).contains("CEIL")) )
 				limitedGroupByList.add(groupby);
 			if ((schema.getAttributeName(groupby).contains("FLOOR")) || (schema.getAttributeName(groupby).contains("CEIL")) )
 				this.windowOffset =  i; // works only with one floor or ceil

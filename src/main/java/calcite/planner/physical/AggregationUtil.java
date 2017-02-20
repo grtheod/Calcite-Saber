@@ -75,7 +75,7 @@ public class AggregationUtil {
 		int i = 0;
 		int numberOfKeyAttributes = 0; 
 		int n = outputSchema.numberOfAttributes();
-		outputSchema.setAttributeName(0, "rowcount"); //by default the first column is related with LongColumnReference(0) and must be first
+		outputSchema.setAttributeName(0, "rowtime"); //by default the first column is related with LongColumnReference(0) and must be first
 		if (groupByAttributes == null) {
 			outputSchema.setAttributeName(n-1, "CNT()");		
 			n = n - 1;

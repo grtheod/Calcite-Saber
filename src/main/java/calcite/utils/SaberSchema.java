@@ -70,7 +70,7 @@ public class SaberSchema {
 				if (schema.getAttributeType(i + 1).equals(PrimitiveType.FLOAT)) 
 					b.putFloat (random.nextFloat());
 				else  
-					b.putInt((int) (timestamp%100));
+					b.putInt((int) (timestamp%30));
 			}
 			b.put(schema.getPad());
 			timestamp++;
