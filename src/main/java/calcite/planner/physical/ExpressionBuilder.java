@@ -64,8 +64,8 @@ public class ExpressionBuilder {
 	        	return new Pair<RexNode,Expression>(expression,expr);	        	
 	    	} else 
 	    	if (operator.equals("CAST")) { 
-				System.err.println("Cast is not supported yet in SABER.");
-				System.exit(1);
+			System.err.println("Cast is not supported yet in SABER.");
+			System.exit(1);
 	        }
 	    	if (operator.equals("FLOOR")) {
 	    		// create floor expression
@@ -114,8 +114,8 @@ public class ExpressionBuilder {
 	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
 	        }
 	    	if (operator.equals("SESSION")) { 
-				System.err.println("Session Windows are not supported yet in SABER.");
-				System.exit(1);
+			System.err.println("Session Windows are not supported yet in SABER.");
+			System.exit(1);
 	        }
 	        return null;
 	    } else {  
