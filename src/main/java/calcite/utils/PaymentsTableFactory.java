@@ -30,7 +30,12 @@ public class PaymentsTableFactory implements TableFactory<Table>  {
  * @param rowType Row type. Specified if the "columns" JSON property. 
  */
 	public boolean useRatesCostModel;
+	public int inputRate;
 	
+	public PaymentsTableFactory(int inputRate) {
+		this.inputRate = inputRate;
+	}
+
 	@Override
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
@@ -39,7 +44,7 @@ public class PaymentsTableFactory implements TableFactory<Table>  {
 			    {ts(10,15,0), 3, 2222, 15},
 			    {ts(10,15,0), 4, 3232, 35}
 			};
-			return new PaymentsTable(ImmutableList.copyOf(rows), useRatesCostModel);
+			return new PaymentsTable(ImmutableList.copyOf(rows), useRatesCostModel, inputRate);
 	}
 	
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType, boolean useRatesCostModel) {
@@ -60,11 +65,13 @@ public class PaymentsTableFactory implements TableFactory<Table>  {
 		};
 
 		private final ImmutableList<Object[]> rows;
-		public boolean useRatesCostModel;
+		private boolean useRatesCostModel;
+		private int inputRate;
 
-		public PaymentsTable(ImmutableList<Object[]> rows, boolean useRatesCostModel) {
+		public PaymentsTable(ImmutableList<Object[]> rows, boolean useRatesCostModel, int inputRate) {
 			this.rows = rows;
 			this.useRatesCostModel = useRatesCostModel;
+			this.inputRate = inputRate;
 		}
 
 		public Enumerable<Object[]> scan(DataContext root) {
@@ -77,7 +84,7 @@ public class PaymentsTableFactory implements TableFactory<Table>  {
 
 		public Statistic getStatistic() {
 			//int rowCount = rows.size();
-			int rowCount = (this.useRatesCostModel) ? 4096 : 1;
+			int rowCount = (this.useRatesCostModel) ? this.inputRate : 1;
 			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of(), 
 					RelCollations.createSingleton(0)); //add List<ImmutableBitSet>
 		}

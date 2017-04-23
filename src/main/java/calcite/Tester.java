@@ -39,14 +39,14 @@ public class Tester {
 
 	public static void main(String[] args) throws Exception {
 		
-		int circularBufferSize =   256 * 1048576;
+		int circularBufferSize =  64 * 1048576;
 		boolean latencyOn = false;
 		SchedulingPolicy schedulingPolicy = SystemConf.SchedulingPolicy.HLS;
 		int switchThreshold = 10;
 		long throughputMonitorInterval = 1000L;
 		int partialWindows = 65536;
 		int hashTableSize = 1048576;
-		int unboundedBufferSize = 360 * 1048576;
+		int unboundedBufferSize = 128 * 1048576;
 		int threads = 2;
 		int batchSize = 1048576;
 		
@@ -54,7 +54,7 @@ public class Tester {
 		boolean useRatesCostModel = true;
 		
 		// execute determines whether the plan is executed or not
-		boolean execute = true;
+		boolean execute = false;
 		
 		// greedyJoinOrder determines which rules will be chosen for the join ordering
 		boolean greedyJoinOrder = true;
@@ -169,15 +169,19 @@ public class Tester {
 		
 		SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
 		
-		schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null, useRatesCostModel));
-		schema.add("orders", new OrdersTableFactory().create(schema, "orders", null, null, useRatesCostModel));
-		schema.add("orders_delivery", new OrdersDeliveryTableFactory().create(schema, "orders_delivery", null, null, useRatesCostModel));				
-		schema.add("payments", new PaymentsTableFactory().create(schema, "payments", null, null, useRatesCostModel));		
-		schema.add("products", new ProductsTableFactory().create(schema, "products", null, null, useRatesCostModel));
+		// set manually input rates according to the input sources
+		ArrayList<Integer> inputRates = new ArrayList<Integer>(Arrays.asList(100, 500, 400, 100, 400));
+		
+		schema.add("customers", new CustomersTableFactory(inputRates.get(0)).create(schema, "customers", null, null, useRatesCostModel));
+		schema.add("orders", new OrdersTableFactory(inputRates.get(1)).create(schema, "orders", null, null, useRatesCostModel));
+		schema.add("orders_delivery", new OrdersDeliveryTableFactory(inputRates.get(2)).create(schema, "orders_delivery", null, null, useRatesCostModel));				
+		schema.add("payments", new PaymentsTableFactory(inputRates.get(3)).create(schema, "payments", null, null, useRatesCostModel));		
+		schema.add("products", new ProductsTableFactory(inputRates.get(4)).create(schema, "products", null, null, useRatesCostModel));
 		
 		/* Create a schema in Saber from a given SchemaPlus and add some mock data for testing.*/
 		DataGenerator dataGenerator = new DataGenerator()
-						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(819, 3276, 3276, 409, 3276)))
+						//.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(/*16480*/8192, 32764, 32764, 4096, 32764)))
+						.setSchema(schema, true, inputRates)
 						.build();
 		
 		Statement statement = connection.createStatement();
@@ -196,7 +200,7 @@ public class Tester {
 		 * timestamp in each stream and streaming query makes it possible to do advanced calculations later, 
 		 * such as GROUP BY and JOIN */
 		String query;
-		if (waitForQuery == false) {
+		if (waitForQuery == false) {	
 			query = paramQuery;
 			System.out.println(query);
 		} else {
@@ -212,8 +216,8 @@ public class Tester {
 					break;
 			}
 		}
-		/*SaberPlanner is a combination of both Volcano and heuristic planner.*/
-		/*SaberPlanner's constructor needs (Schema, greedy, useRatesCostModel, noOptimization).
+		/* SaberPlanner is a combination of both Volcano and heuristic planner.*/
+		/* SaberPlanner's constructor needs (Schema, greedy, useRatesCostModel, noOptimization).
 		 * @greedy is a boolean that defines if we want a greedy Join Reorder or not
 		 * @useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
 		 * @noOptimization is a boolean that defines if we want to use the optimization or not
@@ -230,14 +234,13 @@ public class Tester {
 			// Optimized Plan with rate-based cost model			
 			rootSchema = calciteConnection.getRootSchema();
 			schema = rootSchema.add("s", new AbstractSchema());
-			schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null, true));
-			schema.add("orders", new OrdersTableFactory().create(schema, "orders", null, null, true));
-			schema.add("orders_delivery", new OrdersDeliveryTableFactory().create(schema, "orders_delivery", null, null, true));				
-			schema.add("payments", new PaymentsTableFactory().create(schema, "payments", null, null, true));		
-			schema.add("products", new ProductsTableFactory().create(schema, "products", null, null, true));
+			schema.add("customers", new CustomersTableFactory(inputRates.get(0)).create(schema, "customers", null, null, true));
+			schema.add("orders", new OrdersTableFactory(inputRates.get(1)).create(schema, "orders", null, null, true));
+			schema.add("orders_delivery", new OrdersDeliveryTableFactory(inputRates.get(2)).create(schema, "orders_delivery", null, null, true));				
+			schema.add("payments", new PaymentsTableFactory(inputRates.get(3)).create(schema, "payments", null, null, true));		
+			schema.add("products", new ProductsTableFactory(inputRates.get(4)).create(schema, "products", null, null, true));
 			dataGenerator = new DataGenerator()
-//							.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(819, 3276, 3276, 409, 3276)))
-							.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(420, 1635, 1635, 205, 1635)))
+							.setSchema(schema, true, inputRates)
 							.build();
 			SaberPlanner queryPlanner3 = new SaberPlanner(rootSchema, greedyJoinOrder, true, false);
 			RelNode logicalPlan3 = queryPlanner3.getLogicalPlan (query);			

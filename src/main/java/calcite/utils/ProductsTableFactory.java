@@ -24,8 +24,13 @@ import com.google.common.collect.ImmutableList;
 
 public class ProductsTableFactory implements TableFactory<Table>  {
 	
-	public boolean useRatesCostModel; 
+	public boolean useRatesCostModel;
+	public int inputRate;
 	
+	public ProductsTableFactory(int inputRate) {
+		this.inputRate = inputRate;
+	}
+
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType) {
 		final Object[][] rows = {
 		    {ts(10,15,0), 3, "paint", 3},
@@ -35,7 +40,7 @@ public class ProductsTableFactory implements TableFactory<Table>  {
 		    {ts(10,15,0), 10, "paint", 3},
 		    {ts(10,15,0), 8, "crate", 3}
 		};
-		return new ProductsTable(ImmutableList.copyOf(rows), useRatesCostModel);
+		return new ProductsTable(ImmutableList.copyOf(rows), useRatesCostModel, inputRate);
 	}
 
 	public Table create(SchemaPlus schema, String name, Map<String, Object> operand, RelDataType rowType, boolean useRatesCostModel) {
@@ -57,10 +62,12 @@ public class ProductsTableFactory implements TableFactory<Table>  {
 
 		private final ImmutableList<Object[]> rows;
 		private boolean useRatesCostModel;
+		private int inputRate;
 		
-		public ProductsTable(ImmutableList<Object[]> rows, boolean useRatesCostModel) {
+		public ProductsTable(ImmutableList<Object[]> rows, boolean useRatesCostModel, int inputRate) {
 			this.rows = rows;
 			this.useRatesCostModel = useRatesCostModel;
+			this.inputRate = inputRate;
 		}
 
 		public Enumerable<Object[]> scan(DataContext root) {
@@ -73,7 +80,7 @@ public class ProductsTableFactory implements TableFactory<Table>  {
 
 		public Statistic getStatistic() {
 			//int rowCount = rows.size();
-			int rowCount = (this.useRatesCostModel) ? 16384 : 1;
+			int rowCount = (this.useRatesCostModel) ? this.inputRate : 1;
 			return Statistics.of(rowCount, ImmutableList.<ImmutableBitSet>of(),
 					RelCollations.createSingleton(0)); //add List<ImmutableBitSet>
 		}

@@ -29,6 +29,7 @@ public class ExpressionBuilder {
 
 	RexNode expression;
 	int windowBorder = 0;
+	int windowSlide = 0;
 	int windowOffset;
 	
 	public ExpressionBuilder(RexNode expression, int windowOffset) {
@@ -36,10 +37,11 @@ public class ExpressionBuilder {
 		this.windowOffset = windowOffset;
 	}
 
-	public Pair<Expression, Integer> build() {
+	public Pair<Expression, Pair<Integer, Integer>> build() {
 		Expression saberExpression = getExpression(expression).right;	
 		//System.out.println(saberExpression.toString());
-		return new Pair<Expression, Integer>(saberExpression,this.windowBorder);
+		Pair<Integer, Integer> windowPair = new Pair<Integer, Integer> (this.windowBorder, this.windowSlide);
+		return new Pair<Expression, Pair<Integer, Integer>>(saberExpression, windowPair);
 	}
 
 	private Pair<RexNode, Expression> getExpression(RexNode expression) {
@@ -62,19 +64,58 @@ public class ExpressionBuilder {
 	        	return new Pair<RexNode,Expression>(expression,expr);	        	
 	    	} else 
 	    	if (operator.equals("CAST")) { 
-	        	return null;
+				System.err.println("Cast is not supported yet in SABER.");
+				System.exit(1);
 	        }
 	    	if (operator.equals("FLOOR")) {
-	    		//create floor expression
-	    		//operands.get(0); 	    		
+	    		// create floor expression
+	    		// operands.get(0); 	    		
 	    		this.windowBorder = createWindow(((RexCall) expression).operands.get(1).toString().replace("FLAG(", "").replace(")", ""));
+	    		this.windowSlide = this.windowBorder;
 	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
 	        }
 	    	if (operator.equals("CEIL")) { 
-	    		//create ceil expression
-	    		//operands.get(0);
+	    		// create ceil expression
+	    		// operands.get(0);
 	    		this.windowBorder = createWindow(operands.get(1).left.toString().replace("FLAG(", "").replace(")", ""));
+	    		this.windowSlide = this.windowBorder;
 	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
+	        }
+	    	if (operator.equals("TUMBLE")) { 
+	    		// create tumble expression and the size of the tumbling window
+	    		if (operands.size() == 3) { System.out.println("The alignment parameter is not used at the moment by SABER. "
+	    				+ "Simple tumbling windows are generated without being aligned by " + operands.get(2).left.toString() + ".");}
+	    		this.windowBorder = Integer.parseInt(operands.get(1).left.toString());
+	    		this.windowSlide = this.windowBorder;
+	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
+	        }
+	    	if (operator.equals("TUMBLE_START")) { 
+	    		// create tumble expression for the final projection.
+	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
+	        }
+	    	if (operator.equals("TUMBLE_END")) { 
+	    		// create tumble expression for the final projection. It has no difference at the moment from the case above.
+	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
+	        }
+	    	if (operator.equals("HOP")) { 
+	    		// create hop expression and the size of the tumbling window
+	    		if (operands.size() == 4) { System.out.println("The alignment parameter is not used at the moment by SABER. "
+	    				+ "Simple hopping windows are generated without being aligned by " + operands.get(3).left.toString() + ".");}
+	    		this.windowBorder = Integer.parseInt(operands.get(2).left.toString());
+	    		this.windowSlide = Integer.parseInt(operands.get(1).left.toString());
+	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
+	        }
+	    	if (operator.equals("HOP_START")) { 
+	    		// create hop expression for the final projection.
+	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
+	        }
+	    	if (operator.equals("HOP_END")) { 
+	    		// create hop expression for the final projection. It has no difference at the moment from the case above.
+	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
+	        }
+	    	if (operator.equals("SESSION")) { 
+				System.err.println("Session Windows are not supported yet in SABER.");
+				System.exit(1);
 	        }
 	        return null;
 	    } else {  
@@ -187,6 +228,10 @@ public class ExpressionBuilder {
 
 	public int getWindowBorder() {
 		return this.windowBorder;
+	}
+	
+	public int getWindowSlide() {
+		return this.windowSlide;
 	}
 	
 }

@@ -96,11 +96,11 @@ public class SaberProjectRule implements SaberRule {
 					expressions[i] = new LongColumnReference (column);
 			} else { 
 				//pass the windowOffset to more complex expressions
-				Pair<Expression, Integer> pair = new ExpressionBuilder(attr, windowOffset).build();			
+				Pair<Expression, Pair<Integer, Integer>> pair = new ExpressionBuilder(attr, windowOffset).build();			
 				expressions[i] = pair.left;
-				if (pair.right > 0) {
-					windowRange = pair.right;
-					windowSlide = pair.right;
+				if (pair.right.left> 0) {
+					windowRange = pair.right.left;
+					windowSlide = pair.right.right;
 					windowType = WindowType.RANGE_BASED;
 				}
 			}			

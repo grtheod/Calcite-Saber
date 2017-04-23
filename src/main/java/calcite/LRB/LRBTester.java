@@ -26,15 +26,15 @@ public class LRBTester {
 
 	public static void main(String[] args) throws Exception {
 		
-		int circularBufferSize =   256 * 1048576;
+		int circularBufferSize =   2 * 1048576;
 		boolean latencyOn = false;
 		SchedulingPolicy schedulingPolicy = SystemConf.SchedulingPolicy.HLS;
 		int switchThreshold = 10;
 		long throughputMonitorInterval = 1000L;
 		int partialWindows = 65536;
-		int hashTableSize = 1048576;
-		int unboundedBufferSize = 360 * 1048576;
-		int threads = 2;
+		int hashTableSize =  1 * 1048576;
+		int unboundedBufferSize = 32 * 1048576;
+		int threads = 1;
 		int batchSize = 1048576;
 		
 		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
@@ -158,7 +158,7 @@ public class LRBTester {
 		
 		schema.add("PosSpeedStr", new PosSpeedStrTableFactory().create(schema, "PosSpeedStr", null, null, useRatesCostModel));
 		DataGenerator dataGenerator = new DataGenerator()
-						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(819, 3276, 3276, 409, 3276)))
+						.setSchema(schema, true, new ArrayList<Integer>(Arrays.asList(100)))
 						.build();
 		
 		Statement statement = connection.createStatement();

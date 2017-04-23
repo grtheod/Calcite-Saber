@@ -61,7 +61,7 @@ public class SaberSchema {
 		/* Fill the buffer */
 		long timestamp = 1;
 		while (b.hasRemaining()) {
-			b.putLong (timestamp);
+			b.putLong (timestamp/*%28*/);
 			for (int i = 0; i < numberOfAttributes; i ++) {
 				
 				if (schema.getAttributeType(i + 1).equals(PrimitiveType.LONG)) 
@@ -69,8 +69,12 @@ public class SaberSchema {
 				else
 				if (schema.getAttributeType(i + 1).equals(PrimitiveType.FLOAT)) 
 					b.putFloat (random.nextFloat());
-				else  
-					b.putInt((int) (timestamp%30));
+				else {
+/*					if (schema.getAttributeName(i + 1).contains("customerid"))
+						b.putInt((int) (timestamp%24));
+					else*/
+						b.putInt((int) (timestamp%24));
+				}
 			}
 			b.put(schema.getPad());
 			timestamp++;

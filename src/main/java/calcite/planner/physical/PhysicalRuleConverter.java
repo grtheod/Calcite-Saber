@@ -248,7 +248,7 @@ public class PhysicalRuleConverter {
 						}
 					}					
 				}
-				Thread.sleep(1);
+				Thread.sleep(1); // use sleep to control the input rate
 				if (systemConf.LATENCY_ON){
 					//b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1L));
 				}

@@ -99,9 +99,9 @@ public class VolcanoTester {
 	        connection.unwrap(CalciteConnection.class);
 	    SchemaPlus rootSchema = calciteConnection.getRootSchema();
 	    SchemaPlus schema = rootSchema.add("s", new AbstractSchema());	    	   	    
-	    schema.add("orders", new OrdersTableFactory().create(schema, "orders", null, null));
-	    schema.add("products", new ProductsTableFactory().create(schema, "products", null, null));
-	    schema.add("customers", new CustomersTableFactory().create(schema, "customers", null, null));	    	  
+	    schema.add("orders", new OrdersTableFactory(32764).create(schema, "orders", null, null));
+	    schema.add("products", new ProductsTableFactory(32764).create(schema, "products", null, null));
+	    schema.add("customers", new CustomersTableFactory(16480).create(schema, "customers", null, null));	    	  
 	    
 	    Statement statement = connection.createStatement();	  
 	    

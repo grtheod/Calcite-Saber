@@ -176,7 +176,7 @@ public class QueryPlanner {
     // Create executor
     DataContext dataContext =
             Schemas.createDataContext(statement.getConnection());
-    final Executor executor = config.getExecutor();//new RexExecutorImpl(dataContext);
+    final Executor executor = (Executor) config.getExecutor();//new RexExecutorImpl(dataContext);
     
     // 2. Apply pre-join order optimizations
     //ImmutableList<RelOptRule> preJoinRules = SaberRuleSets.PRE_JOIN_ORDERING_RULES;
