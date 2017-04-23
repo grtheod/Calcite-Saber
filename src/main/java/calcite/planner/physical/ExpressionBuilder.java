@@ -63,9 +63,9 @@ public class ExpressionBuilder {
 	        	//System.out.println("Sum inside case " + expr.toString());
 	        	return new Pair<RexNode,Expression>(expression,expr);	        	
 	    	} else 
-	    	if (operator.equals("CAST")) { 
-			System.err.println("Cast is not supported yet in SABER.");
-			System.exit(1);
+	    	if (operator.equals("CAST")) {
+	    		System.err.println("Cast is not supported yet in SABER.");
+	    		System.exit(1);
 	        }
 	    	if (operator.equals("FLOOR")) {
 	    		// create floor expression
@@ -113,9 +113,9 @@ public class ExpressionBuilder {
 	    		// create hop expression for the final projection. It has no difference at the moment from the case above.
 	    		return new Pair<RexNode,Expression>(operands.get(0).left, new LongColumnReference(0));
 	        }
-	    	if (operator.equals("SESSION")) { 
-			System.err.println("Session Windows are not supported yet in SABER.");
-			System.exit(1);
+	    	if (operator.equals("SESSION")) {
+	    		System.err.println("Session Windows are not supported yet in SABER.");
+	    		System.exit(1);
 	        }
 	        return null;
 	    } else {  
