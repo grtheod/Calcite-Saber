@@ -25,7 +25,9 @@ public abstract class SaberAggregateRelBase extends Aggregate implements SaberRe
 	}
 	
 	@Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-	      
+	    
+		// To be fixed.
+		// RelOptCost previousCost = planner.getCost(this.input, mq);
 		double rowCount = mq.getRowCount(this); 
 	    float multiplier = 1f + (float) aggCalls.size() * 0.125f;
 	    for (AggregateCall aggCall : aggCalls) {

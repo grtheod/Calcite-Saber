@@ -150,8 +150,11 @@ public class SaberRuleSets {
 	
 	static final RelOptRule SABER_PROJECT_MERGE_RULE = new ProjectMergeRule(true, SaberRelFactories.SABER_LOGICAL_PROJECT_FACTORY);
 	
+	static final RelOptRule SABER_FILTER_PUSH_THROUGH_FILTER = new FilterPushThroughFilter(SaberFilterRel.class, SaberFilterRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
+	
 	public static final ImmutableList<RelOptRule> VOLCANO_RULES =
 		ImmutableList.of(
+				//SABER_FILTER_PUSH_THROUGH_FILTER,
 				SABER_AGGREGATE_JOIN_TRANSPOSE_RULE,
 				SABER_FILTER_AGGREGATE_TRANSPOSE_RULE,
 				SABER_FILTER_PROJECT_TRANSPOSE_RULE,
@@ -282,7 +285,7 @@ public class SaberRuleSets {
 				
 				// 3. Run exhaustive PPD, add not null filters, transitive inference,
 		        // constant propagation, constant folding
-				FilterMergeRule.INSTANCE,
+		        FilterMergeRule.INSTANCE,
 				FilterAggregateTransposeRule.INSTANCE,
 				FilterProjectTransposeRule.INSTANCE,
 				//FilterPushThroughFilter.INSTANCE,				

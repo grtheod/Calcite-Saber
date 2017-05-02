@@ -25,7 +25,9 @@ public class SaberWindowRelBase extends Window implements SaberRelNode {
 	}
 	  
 	@Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-	      
+	    
+		// To be fixed.
+		// RelOptCost previousCost = planner.getCost(this.input, mq);
 		double rowCount = mq.getRowCount(this); 
 		List<AggregateCall> aggCalls = this.groups.get(0).getAggregateCalls(this);
 	    float multiplier = 1f + (float) aggCalls.size() * 0.125f;
@@ -37,13 +39,13 @@ public class SaberWindowRelBase extends Window implements SaberRelNode {
 	      }
 	    }	  
 	    //System.out.println("multiplier:" + multiplier );
-	    double inputRate = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getRate();
+	    double inputRate = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getRate(); // ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getRate();
 	    double outputRate = multiplier * inputRate ;
 	    double cpuCost = multiplier * SaberCostBase.Cs * inputRate;	    
 		double window = createWindowFrame(this.getConstants());
 		window = (this.groups.get(0).isRows) ? window :  window * inputRate; // if the window is time-based W=T*λi
 		double memory = window;
-		double R = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getCpu() / outputRate;
+		double R = (((SaberCostBase) mq.getCumulativeCost(this.getInput())).getCpu() + cpuCost) / outputRate;
 		
 		SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
 		return costFactory.makeCost(multiplier * rowCount, cpuCost, 0, outputRate, memory, window, R);

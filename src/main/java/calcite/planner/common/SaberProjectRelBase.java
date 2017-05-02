@@ -29,6 +29,8 @@ public abstract class SaberProjectRelBase extends Project implements SaberRelNod
 
 	@Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {		
 
+	  // To be fixed.
+	  // RelOptCost previousCost = planner.getCost(this.input, mq);
       double rowCount = mq.getRowCount(this); 
       double rate = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getRate();
       double cpuCost = SaberCostBase.Cs * rate;
@@ -44,7 +46,7 @@ public abstract class SaberProjectRelBase extends Project implements SaberRelNod
 		  }
 	  }
 	  window = (windowRange > 0) ? windowRange : window; 
-	  double R = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getCpu() / rate;
+	  double R = (((SaberCostBase) mq.getCumulativeCost(this.getInput())).getCpu() + cpuCost) / rate;
 	  
       SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
       return costFactory.makeCost(rowCount, cpuCost, 0, rate, 0, window, R);

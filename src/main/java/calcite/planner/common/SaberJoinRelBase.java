@@ -27,20 +27,22 @@ public abstract class SaberJoinRelBase extends Join implements SaberRel {
 	
 	@Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {		
 	
-	      double rowCount = mq.getRowCount(this); 
+		  RelOptCost previousLeftCost = planner.getCost(this.left, mq);
+		  RelOptCost previousRightCost = planner.getCost(this.right, mq);
+		  double rowCount = mq.getRowCount(this); 
 		  double selectivity = mq.getSelectivity(this.left, this.getCondition()); //fix it
 		  //System.out.println("selectivity:" + selectivity );
-		  double leftRate = ((SaberCostBase) mq.getCumulativeCost(this.left)).getRate();
-		  double rightRate = ((SaberCostBase) mq.getCumulativeCost(this.right)).getRate();
-		  double leftWindow = ((SaberCostBase) mq.getCumulativeCost(this.left)).getWindow();
-		  double rightWindow = ((SaberCostBase) mq.getCumulativeCost(this.right)).getWindow();
+		  double leftRate = ((SaberCostBase) previousLeftCost/*mq.getCumulativeCost(this.left)*/).getRate();
+		  double rightRate = ((SaberCostBase) previousRightCost).getRate();
+		  double leftWindow = ((SaberCostBase) previousLeftCost).getWindow();
+		  double rightWindow = ((SaberCostBase) previousRightCost).getWindow();
 		  
 		  double rate = selectivity * (leftRate*rightWindow + rightRate*leftWindow);
 		  double cpuCost = SaberCostBase.Cj * (leftRate + rightRate);
 		  double memory =  leftWindow + rightWindow;
 		  double window =  selectivity * leftWindow * rightWindow;
 		  window = (window < 1) ? 1 : window; // fix window size in order 
-		  double R = (((SaberCostBase) mq.getCumulativeCost(this.left)).getCpu() + ((SaberCostBase) mq.getCumulativeCost(this.right)).getCpu() + cpuCost) / rate;
+		  double R = (((SaberCostBase) previousLeftCost).getCpu() + ((SaberCostBase) previousRightCost).getCpu() + cpuCost) / rate;
 		  
 		  SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
 	      return costFactory.makeCost(rowCount, cpuCost, 0, rate, memory, window, R);

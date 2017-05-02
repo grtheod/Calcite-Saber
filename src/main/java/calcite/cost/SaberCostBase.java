@@ -44,11 +44,18 @@ public class SaberCostBase implements SaberRelOptCost {
     public static final int Ca = PROJECT_CPU_COST; // Cost of applying an aggregate function
 	  		
 	static final SaberCostBase INFINITY =
-		new SaberCostBase(
+		new SaberCostBase/*(
 			Double.POSITIVE_INFINITY,
 		    Double.POSITIVE_INFINITY,
 		    Double.POSITIVE_INFINITY,
-		    Double.POSITIVE_INFINITY) {
+		    Double.POSITIVE_INFINITY) */
+		(Double.MAX_VALUE,
+				Double.MAX_VALUE,
+			    Double.MAX_VALUE,
+			    Double.MAX_VALUE,
+			    Double.MAX_VALUE,
+			    Double.MAX_VALUE,
+			    Double.MAX_VALUE) {
 		@Override
 		    public String toString() {
 		    	return "{inf}";
@@ -58,6 +65,9 @@ public class SaberCostBase implements SaberRelOptCost {
 	static final SaberCostBase HUGE =
 		new SaberCostBase(Double.MAX_VALUE,
 			Double.MAX_VALUE,
+		    Double.MAX_VALUE,
+		    Double.MAX_VALUE,
+		    Double.MAX_VALUE,
 		    Double.MAX_VALUE,
 		    Double.MAX_VALUE) {
 		@Override
@@ -335,7 +345,7 @@ public class SaberCostBase implements SaberRelOptCost {
 	    }
 
 	    public RelOptCost makeInfiniteCost() {
-	      return SaberCostBase.INFINITY;
+	      return SaberCostBase.HUGE; // Changed from INFINITY in order to work with the new Operators.
 	    }
 
 	    public RelOptCost makeTinyCost() {

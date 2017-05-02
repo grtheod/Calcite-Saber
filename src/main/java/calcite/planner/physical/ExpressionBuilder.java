@@ -64,8 +64,9 @@ public class ExpressionBuilder {
 	        	return new Pair<RexNode,Expression>(expression,expr);	        	
 	    	} else 
 	    	if (operator.equals("CAST")) {
-	    		System.err.println("Cast is not supported yet in SABER.");
-	    		System.exit(1);
+	    		return null;
+	    		/*System.err.println("Cast is not supported yet in SABER.");
+	    		System.exit(1);*/
 	        }
 	    	if (operator.equals("FLOOR")) {
 	    		// create floor expression
