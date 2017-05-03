@@ -45,6 +45,6 @@ public abstract class SaberJoinRelBase extends Join implements SaberRel {
 		  double R = (((SaberCostBase) previousLeftCost).getCpu() + ((SaberCostBase) previousRightCost).getCpu() + cpuCost) / rate;
 		  
 		  SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
-	      return costFactory.makeCost(rowCount, cpuCost, 0, rate, memory, window, R);
+	          return costFactory.makeCost(rowCount, cpuCost, 0, rate, memory, window, R);
 	}
 }
