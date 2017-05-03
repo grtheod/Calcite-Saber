@@ -26,9 +26,9 @@ public abstract class SaberAggregateRelBase extends Aggregate implements SaberRe
 	
 	@Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
 	    
-		// To be fixed.
-		// RelOptCost previousCost = planner.getCost(this.input, mq);
-		double rowCount = mq.getRowCount(this); 
+	    // To be fixed.
+	    // RelOptCost previousCost = planner.getCost(this.input, mq);
+	    double rowCount = mq.getRowCount(this); 
 	    float multiplier = 1f + (float) aggCalls.size() * 0.125f;
 	    for (AggregateCall aggCall : aggCalls) {
 	      if (aggCall.getAggregation().getName().equals("SUM")) {
@@ -41,11 +41,11 @@ public abstract class SaberAggregateRelBase extends Aggregate implements SaberRe
 	    double inputRate = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getRate();
 	    double outputRate = multiplier * inputRate;
 	    double cpuCost = multiplier * SaberCostBase.Cs * inputRate;	    
-		double window = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getWindow();
-		double memory = window;
+	    double window = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getWindow();
+	    double memory = window;
 		
-		double R = (((SaberCostBase) mq.getCumulativeCost(this.getInput())).getCpu() + cpuCost) / outputRate;
-		SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
-		return costFactory.makeCost(multiplier * rowCount, cpuCost, 0, outputRate, memory, window, R);
+	    double R = (((SaberCostBase) mq.getCumulativeCost(this.getInput())).getCpu() + cpuCost) / outputRate;
+	     SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
+	    return costFactory.makeCost(multiplier * rowCount, cpuCost, 0, outputRate, memory, window, R);
 	}
 }
