@@ -29,27 +29,34 @@ public abstract class SaberProjectRelBase extends Project implements SaberRelNod
 
 	@Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {		
 
-	  // To be fixed.
-	  // RelOptCost previousCost = planner.getCost(this.input, mq);
-          double rowCount = mq.getRowCount(this); 
-          double rate = ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getRate();
-          double cpuCost = SaberCostBase.Cs * rate;
-          double window =  ((SaberCostBase) mq.getCumulativeCost(this.getInput())).getWindow();
-	  List<RexNode> projectedAttrs = this.getChildExps(); 
-	  double windowRange = 0; // find it in a better way
-	  for (RexNode attr : projectedAttrs){
-		  if (!(attr.getKind().toString().equals("INPUT_REF"))) {
-				int tempSize = new ExpressionBuilder(attr,0).getWindowForPlan();			
+	    // To be fixed.
+		RelOptCost previousCost = planner.getCost(this.input, mq);
+		double rowCount = mq.getRowCount(this);
+		double rate = ((SaberCostBase) previousCost).getRate();
+		double cpuCost = SaberCostBase.Cs * rate;
+		double window =  ((SaberCostBase) previousCost).getWindow();
+		List<RexNode> projectedAttrs = this.getChildExps(); 
+		double windowRange = 0; // find it in a better way
+		for (RexNode attr : projectedAttrs){
+			if (!(attr.getKind().toString().equals("INPUT_REF"))) {
+				int tempSize = new ExpressionBuilder(attr,0).getWindowForPlan();
 				if (tempSize > 0) {
 					windowRange = tempSize * rate; // W = T * λi
 				}
-		  }
-	  }
-	  window = (windowRange > 0) ? windowRange : window; 
-	  double R = (((SaberCostBase) mq.getCumulativeCost(this.getInput())).getCpu() + cpuCost) / rate;
-	  
-          SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
-          return costFactory.makeCost(rowCount, cpuCost, 0, rate, 0, window, R);
+			}
+		}
+		window = (windowRange > 0) ? windowRange : window;
+		double R = (((SaberCostBase) previousCost).getCpu() + cpuCost) / rate;
+		
+	    if (Double.isInfinite(R))
+	      	R = Double.MAX_VALUE;
+	    if (Double.isInfinite(rate))
+		rate = Double.MAX_VALUE;
+	    if (Double.isInfinite(cpuCost))
+		cpuCost = Double.MAX_VALUE;
+		
+		SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
+		return costFactory.makeCost(rowCount, cpuCost, 0, rate, 0, window, R);
     }
 	
 }

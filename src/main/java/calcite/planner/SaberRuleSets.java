@@ -154,12 +154,12 @@ public class SaberRuleSets {
 	
 	public static final ImmutableList<RelOptRule> VOLCANO_RULES =
 		ImmutableList.of(
-				//SABER_FILTER_PUSH_THROUGH_FILTER,
+				SABER_FILTER_PUSH_THROUGH_FILTER,
 				SABER_AGGREGATE_JOIN_TRANSPOSE_RULE,
 				SABER_FILTER_AGGREGATE_TRANSPOSE_RULE,
 				SABER_FILTER_PROJECT_TRANSPOSE_RULE,
 				SABER_PROJECT_FILTER_TRANSPOSE_RULE,
-				//SABER_PROJECT_JOIN_TRANSPOSE_RULE,
+				//SABER_PROJECT_JOIN_TRANSPOSE_RULE, //Test it better with Join Reordering!!
 				SABER_PROJECT_MERGE_RULE
 				);
 	
@@ -285,7 +285,7 @@ public class SaberRuleSets {
 				
 				// 3. Run exhaustive PPD, add not null filters, transitive inference,
 		        // constant propagation, constant folding
-		        FilterMergeRule.INSTANCE,
+		        //FilterMergeRule.INSTANCE,
 				FilterAggregateTransposeRule.INSTANCE,
 				FilterProjectTransposeRule.INSTANCE,
 				//FilterPushThroughFilter.INSTANCE,				
