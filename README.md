@@ -3,17 +3,13 @@
 
 2) Use the Tester.java.
 
-Orders Schema
--------------------------
-rowtime(long)* | orderid(int) | productid(int) | units(int) | costumerid(int)
-
-Products Schema
--------------------------
-rowtime(long)* | productid(int) | description(int) | price(float)
-
 Customers Schema
 -------------------------
 rowtime(long)* | customerid(int) | phone(long) 
+
+Orders Schema
+-------------------------
+rowtime(long)* | orderid(int) | productid(int) | units(int) | costumerid(int)
 
 Orders_Delivery Schema
 -------------------------
@@ -22,6 +18,10 @@ rowtime(long)* | orderid(int) | date_reported(long) | delivery_status_code(int)
 Payments Schema 
 -------------------------
 rowtime(long)* | costumerid(int) | payment_date(int) | amount(float)
+
+Products Schema
+-------------------------
+rowtime(long)* | productid(int) | description(int) | price(float)
 
 
 
