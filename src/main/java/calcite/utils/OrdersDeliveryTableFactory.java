@@ -57,7 +57,7 @@ public class OrdersDeliveryTableFactory implements TableFactory<Table>  {
 		        	.add("rowtime", SqlTypeName.TIMESTAMP)
 		            .add("orderid", SqlTypeName.INTEGER)
 		            .add("date_reported", SqlTypeName.TIMESTAMP)
-		            .add("delivery_status_coce", SqlTypeName.INTEGER)
+		            .add("delivery_status_code", SqlTypeName.INTEGER)
 		            .build();
 			}
 		};
