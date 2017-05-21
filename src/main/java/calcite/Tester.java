@@ -1,26 +1,19 @@
 package calcite;
 
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+
 import java.util.Scanner;
 
 import org.apache.calcite.jdbc.CalciteConnection;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexNode;
+
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
-import org.apache.calcite.sql.SqlExplainLevel;
 
-import calcite.planner.QueryPlanner;
 import calcite.planner.SaberPlanner;
 import calcite.planner.physical.PhysicalRuleConverter;
 import calcite.planner.physical.SystemConfig;
@@ -45,7 +38,7 @@ public class Tester {
 		int switchThreshold = 10;
 		long throughputMonitorInterval = 1000L;
 		int partialWindows = 65536;
-		int hashTableSize = 1048576;
+		int hashTableSize = 2 * 1048576;
 		int unboundedBufferSize = 128 * 1048576;
 		int threads = 2;
 		int batchSize = 1048576;
@@ -170,7 +163,7 @@ public class Tester {
 		SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
 		
 		// set manually input rates according to the input sources
-		ArrayList<Integer> inputRates = new ArrayList<Integer>(Arrays.asList(100, 500, 400, 100, 400));
+		ArrayList<Integer> inputRates = new ArrayList<Integer>(Arrays.asList(100, 100000, 400, 100, 400));
 		
 		schema.add("customers", new CustomersTableFactory(inputRates.get(0)).create(schema, "customers", null, null, useRatesCostModel));
 		schema.add("orders", new OrdersTableFactory(inputRates.get(1)).create(schema, "orders", null, null, useRatesCostModel));
@@ -239,6 +232,14 @@ public class Tester {
 		else{
 			SaberPlanner queryPlanner = new SaberPlanner(rootSchema, greedyJoinOrder, useRatesCostModel, noOptimization);
 			RelNode logicalPlan = queryPlanner.getLogicalPlan (query);
+/*			RexProgram temp = ((LogicalCalc) logicalPlan).getProgram();
+			  RexLocalRef programCondition = temp.getCondition();
+			  RexNode condition;
+			  if (programCondition == null) {
+			    condition = null;
+			  } else {
+			    condition = temp.expandLocalRef(programCondition);
+			  }*/
 			
 			// RelNode logicalPlan = queryPlanner.getLogicalPlan (
 			// 	"select rowtime, sum(units), count(orderid) "

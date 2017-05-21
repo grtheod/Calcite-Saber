@@ -1,4 +1,4 @@
-package calcite.planner.logical.rules;
+package calcite.planner.logical.rules.converter;
 
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;

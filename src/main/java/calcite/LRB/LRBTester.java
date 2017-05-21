@@ -38,16 +38,16 @@ public class LRBTester {
 		int batchSize = 1048576;
 		
 		// useRatesCostModel is a boolean that defines if we want to use the RatesCostModel or not
-		boolean useRatesCostModel = false;
+		boolean useRatesCostModel = true;
 		
 		// execute determines whether the plan is executed or not
-		boolean execute = true;
+		boolean execute = false;
 		
 		// greedyJoinOrder determines which rules will be chosen for the join ordering
 		boolean greedyJoinOrder = true;
 		
 		// noOptimization determines whether optimization rules will be applied or not
-		boolean noOptimization = false;
+		boolean noOptimization = true;
 		
 		// compute all plans
 		boolean allPlans =  false;

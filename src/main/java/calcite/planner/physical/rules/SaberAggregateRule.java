@@ -39,7 +39,7 @@ public class SaberAggregateRule implements SaberRule{
 	Query query;
 	int queryId = 0;
 	long timestampReference = 0;
-	int windowOffset = 0;
+	int windowOffset = -1;
 	int batchSize;
 	
 	public SaberAggregateRule(ITupleSchema schema,RelNode rel, int queryId, long timestampReference, WindowDefinition window, int batchSize){
@@ -74,7 +74,8 @@ public class SaberAggregateRule implements SaberRule{
 		List<Integer> limitedGroupByList = new ArrayList<Integer>();
 		int i = 0;
 		for ( Integer groupby : aggregate.getGroupSet()){ 
-			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && !(schema.getAttributeName(groupby).contains("CEIL")) )
+			if (!(schema.getAttributeName(groupby).contains("rowtime")) && !(schema.getAttributeName(groupby).contains("FLOOR")) && 
+					!(schema.getAttributeName(groupby).contains("CEIL")) && !(schema.getAttributeName(groupby).contains("HOP")) && !(schema.getAttributeName(groupby).contains("TUMBLE")))
 				limitedGroupByList.add(groupby);
 			if ((schema.getAttributeName(groupby).contains("FLOOR")) || (schema.getAttributeName(groupby).contains("CEIL")) )
 				this.windowOffset =  i; // works only with one floor or ceil

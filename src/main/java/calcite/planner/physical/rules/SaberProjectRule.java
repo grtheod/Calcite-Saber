@@ -62,6 +62,7 @@ public class SaberProjectRule implements SaberRule {
 		long windowSlide = (window!=null) ? window.getSlide() : 1; //maybe keep the (1,1) window for project and filter??
 		int projectedAttributes = 0;
 		int expressionDepth = 1;
+		int numberOfInputAttrs = schema.numberOfAttributes();
 				
 		QueryConf queryConf = new QueryConf (batchSize);
 		
@@ -85,8 +86,11 @@ public class SaberProjectRule implements SaberRule {
 					//if (column==windowOffset)column+=1; 
 					column -= windowBarrier;	
 				}				
-				if ((windowBarrier < 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalAggregate
+				if ((windowBarrier < 0) && (column >= windowOffset) && (windowOffset >0)) //fix the offset when the previous operator was LogicalAggregate
 					column -= 1;
+				
+				if (column < 0 && windowBarrier > 0) column+= windowBarrier;
+				if (column >= numberOfInputAttrs) column -= 1;
 				
 				if (schema.getAttributeType(column).equals(PrimitiveType.INT))
 					expressions[i] = new IntColumnReference (column);
@@ -117,8 +121,12 @@ public class SaberProjectRule implements SaberRule {
 					//if (column==windowOffset)column+=1; 
 					column -= windowBarrier;	
 				}				
-				if ((windowBarrier < 0) && (column >= windowOffset)) //fix the offset when the previous operator was LogicalAggregate
+				if ((windowBarrier < 0) && (column >= windowOffset) && (windowOffset >0)) //fix the offset when the previous operator was LogicalAggregate
 					column -= 1;
+				
+				if (column < 0 && windowBarrier > 0) column+= windowBarrier;
+				if (column >= numberOfInputAttrs) column -= 1;
+				
 				outputSchema.setAttributeName(i, schema.getAttributeName(column));
 			} else {
 				outputSchema.setAttributeName(i, attr.toString());

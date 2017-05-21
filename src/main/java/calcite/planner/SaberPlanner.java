@@ -1,11 +1,9 @@
 package calcite.planner;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
-import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
@@ -30,38 +28,6 @@ import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
-import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
-import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
-import org.apache.calcite.rel.rules.AggregateProjectPullUpConstantsRule;
-import org.apache.calcite.rel.rules.AggregateReduceFunctionsRule;
-import org.apache.calcite.rel.rules.AggregateRemoveRule;
-import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
-import org.apache.calcite.rel.rules.FilterJoinRule;
-import org.apache.calcite.rel.rules.FilterMergeRule;
-import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
-import org.apache.calcite.rel.rules.FilterTableScanRule;
-import org.apache.calcite.rel.rules.JoinAssociateRule;
-import org.apache.calcite.rel.rules.JoinCommuteRule;
-import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
-import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
-import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
-import org.apache.calcite.rel.rules.JoinPushTransitivePredicatesRule;
-import org.apache.calcite.rel.rules.JoinToMultiJoinRule;
-import org.apache.calcite.rel.rules.LoptJoinTree;
-import org.apache.calcite.rel.rules.LoptOptimizeJoinRule;
-import org.apache.calcite.rel.rules.MultiJoin;
-import org.apache.calcite.rel.rules.MultiJoinOptimizeBushyRule;
-import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
-import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
-import org.apache.calcite.rel.rules.ProjectMergeRule;
-import org.apache.calcite.rel.rules.ProjectRemoveRule;
-import org.apache.calcite.rel.rules.ProjectTableScanRule;
-import org.apache.calcite.rel.rules.ProjectToWindowRule;
-import org.apache.calcite.rel.rules.ProjectWindowTransposeRule;
-import org.apache.calcite.rel.rules.PruneEmptyRules;
-import org.apache.calcite.rel.rules.ReduceExpressionsRule;
-import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlNode;
@@ -74,7 +40,6 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelConversionException;
-import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.ValidationException;
 
 import com.google.common.collect.ImmutableList;
@@ -83,20 +48,12 @@ import com.google.common.collect.Lists;
 import calcite.cost.SaberCostBase;
 import calcite.cost.SaberRelOptCostFactory;
 import calcite.planner.logical.SaberRel;
-import calcite.planner.logical.rules.EnumerableAggregateToLogicalAggregateRule;
-import calcite.planner.logical.rules.EnumerableFilterToLogicalFilterRule;
-import calcite.planner.logical.rules.EnumerableJoinToLogicalJoinRule;
-import calcite.planner.logical.rules.EnumerableProjectToLogicalProjectRule;
-import calcite.planner.logical.rules.EnumerableTableScanToLogicalTableScanRule;
-import calcite.planner.logical.rules.EnumerableWindowToLogicalWindowRule;
-import calcite.planner.logical.rules.FilterPushThroughFilter;
-import calcite.planner.logical.rules.SaberLogicalAggregateRule;
-import calcite.planner.logical.rules.SaberLogicalFilterRule;
-import calcite.planner.logical.rules.SaberLogicalJoinRule;
-import calcite.planner.logical.rules.SaberLogicalProjectRule;
-import calcite.planner.logical.rules.SaberLogicalTableScanRule;
-import calcite.planner.logical.rules.SaberLogicalWindowRule;
-import calcite.planner.physical.SaberLogicalConvention;
+import calcite.planner.logical.rules.converter.SaberLogicalAggregateRule;
+import calcite.planner.logical.rules.converter.SaberLogicalFilterRule;
+import calcite.planner.logical.rules.converter.SaberLogicalJoinRule;
+import calcite.planner.logical.rules.converter.SaberLogicalProjectRule;
+import calcite.planner.logical.rules.converter.SaberLogicalTableScanRule;
+import calcite.planner.logical.rules.converter.SaberLogicalWindowRule;
 
 /**
  * A wrapper around Calcite query planner that is used to parse, validate and generate a physical plan from a streaming
@@ -284,6 +241,12 @@ public class SaberPlanner {
 	    		ImmutableList<RelOptRule> afterJoinRules2 = SaberRuleSets.PROJECT_PUSH_DOWN;
 	    		afterJoinPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP,
 	    				afterJoinRules2.toArray(new RelOptRule[afterJoinRules.size()]) );
+	    		
+	    		// Optimization Phase 5.c
+	    		System.out.println("Optimization Phase 5.c : Applying Calc rules with HepPlanner...");
+	    		ImmutableList<RelOptRule> saberCalcRules = SaberRuleSets.SABER_CALC_RULES;
+	    		afterJoinPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP,
+	    				saberCalcRules.toArray(new RelOptRule[saberCalcRules.size()]) );
 	    		
 	    		// Print here the final Cost
 	    		System.out.println ();

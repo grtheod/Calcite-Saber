@@ -3,6 +3,7 @@ package calcite.planner.physical;
 import org.apache.calcite.rel.RelNode;
 
 import calcite.planner.physical.rules.SaberAggregateRule;
+import calcite.planner.physical.rules.SaberCalcRule;
 import calcite.planner.physical.rules.SaberFilterRule;
 import calcite.planner.physical.rules.SaberJoinRule;
 import calcite.planner.physical.rules.SaberProjectRule;
@@ -19,6 +20,7 @@ public class RuleAssembler {
 	protected static final String AGGREGATE = "LogicalAggregate";
 	protected static final String SCAN = "LogicalTableScan";
 	protected static final String WINDOW = "LogicalWindow";
+	protected static final String CALC = "LogicalCalc";
 	
 	String operator;
 	RelNode rel;
@@ -97,6 +99,11 @@ public class RuleAssembler {
 				SaberWindowRule window = new SaberWindowRule(schema1, rel, queryId, timestampReference, window1, batchSize);
 				window.prepareRule();				
 				return window;
+			case CALC :
+				System.out.println("==> Assembling Calc");
+				SaberCalcRule calc = new SaberCalcRule(schema1, rel, queryId, timestampReference, window1, windowOffset, windowBarrier, batchSize);
+				calc.prepareRule();				
+				return calc;
 			default :
 				System.err.println("error: invalid rule");
 				System.exit(1);

@@ -1,6 +1,5 @@
-package calcite.planner.logical.rules;
+package calcite.planner.logical.rules.toLogicalRules;
 
-import org.apache.calcite.adapter.enumerable.EnumerableProject;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelTraitSet;
@@ -8,17 +7,19 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.logical.LogicalProject;
 
-public class EnumerableProjectToLogicalProjectRule extends RelOptRule {
-	public static final EnumerableProjectToLogicalProjectRule INSTANCE = new EnumerableProjectToLogicalProjectRule();
+import calcite.planner.logical.SaberProjectRel;
+
+public class SaberProjectRelToLogicalProjectRule extends RelOptRule {
+	public static final SaberProjectRelToLogicalProjectRule INSTANCE = new SaberProjectRelToLogicalProjectRule();
 
 	  //~ Constructors -----------------------------------------------------------
 
-	  private EnumerableProjectToLogicalProjectRule() {		  
-		  super(operand(EnumerableProject.class, any()), RelFactories.LOGICAL_BUILDER, null);
+	  private SaberProjectRelToLogicalProjectRule() {		  
+		  super(operand(SaberProjectRel.class, any()), RelFactories.LOGICAL_BUILDER, null);
 	  }
 
 	  @Override public void onMatch(RelOptRuleCall call) {
-		    final EnumerableProject project = call.rel(0);
+		    final SaberProjectRel project = call.rel(0);
 		    final RelNode input = project.getInput();
 		    final RelTraitSet traits = project.getTraitSet();
 		    

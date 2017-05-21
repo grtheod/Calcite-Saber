@@ -44,7 +44,14 @@ public abstract class SaberJoinRelBase extends Join implements SaberRel {
 		  window = (window < 1) ? 1 : window; // fix window size in order 
 		  double R = (((SaberCostBase) previousLeftCost).getCpu() + ((SaberCostBase) previousRightCost).getCpu() + cpuCost) / rate;
 		  
+		  if (Double.isNaN(R) || Double.isInfinite(R))
+			  R = Double.MAX_VALUE;
+		  if (Double.isInfinite(rate))
+			  rate = Double.MAX_VALUE;
+		  if (Double.isInfinite(cpuCost))
+			  cpuCost = Double.MAX_VALUE;
+		  
 		  SaberCostFactory costFactory = (SaberCostFactory)planner.getCostFactory();
-	          return costFactory.makeCost(rowCount, cpuCost, 0, rate, memory, window, R);
+		  return costFactory.makeCost(rowCount, cpuCost, 0, rate, memory, window, R);
 	}
 }

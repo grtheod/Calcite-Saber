@@ -1,22 +1,23 @@
-package calcite.planner.logical.rules;
+package calcite.planner.logical.rules.toLogicalRules;
 
-import org.apache.calcite.adapter.enumerable.EnumerableWindow;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.logical.LogicalWindow;
 
-public class EnumerableWindowToLogicalWindowRule extends RelOptRule {
-	  public static final EnumerableWindowToLogicalWindowRule INSTANCE = new EnumerableWindowToLogicalWindowRule();
+import calcite.planner.logical.SaberWindowRel;
 
-	  private EnumerableWindowToLogicalWindowRule() {
-		  super(operand(EnumerableWindow.class, any()), RelFactories.LOGICAL_BUILDER, null);
+public class SaberWindowRelToLogicalWindowRule extends RelOptRule {
+	  public static final SaberWindowRelToLogicalWindowRule INSTANCE = new SaberWindowRelToLogicalWindowRule();
+
+	  private SaberWindowRelToLogicalWindowRule() {
+		  super(operand(SaberWindowRel.class, any()), RelFactories.LOGICAL_BUILDER, null);
 	  }
 
 	  @Override
 	  public void onMatch(RelOptRuleCall call) {
-	    final EnumerableWindow window = call.rel(0);
+	    final SaberWindowRel window = call.rel(0);
 	    //final RelNode input = call.rel(1);
 	    final RelTraitSet traits = window.getTraitSet();
 	    call.transformTo(

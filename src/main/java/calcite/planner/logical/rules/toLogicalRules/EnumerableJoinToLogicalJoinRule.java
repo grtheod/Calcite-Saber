@@ -1,7 +1,8 @@
-package calcite.planner.logical.rules;
+package calcite.planner.logical.rules.toLogicalRules;
 
 import java.util.Set;
 
+import org.apache.calcite.adapter.enumerable.EnumerableJoin;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
@@ -15,20 +16,18 @@ import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
 
-import calcite.planner.logical.SaberJoinRel;
+public class EnumerableJoinToLogicalJoinRule  extends RelOptRule {
 
-public class SaberJoinRelToLogicalJoinRule  extends RelOptRule {
-
-	  public static final SaberJoinRelToLogicalJoinRule INSTANCE = new SaberJoinRelToLogicalJoinRule();
+	  public static final EnumerableJoinToLogicalJoinRule INSTANCE = new EnumerableJoinToLogicalJoinRule();
 
 	  //~ Constructors -----------------------------------------------------------
 
-	  private SaberJoinRelToLogicalJoinRule() {		  
-		  super(operand(SaberJoinRel.class, any()), RelFactories.LOGICAL_BUILDER, null);
+	  private EnumerableJoinToLogicalJoinRule() {		  
+		  super(operand(EnumerableJoin.class, any()), RelFactories.LOGICAL_BUILDER, null);
 	  }
 
 	  public boolean matches(RelOptRuleCall call) {
-		    SaberJoinRel join = call.rel(0);
+		    EnumerableJoin join = call.rel(0);
 		    switch (join.getJoinType()) {
 		    case INNER:
 		      return true;
@@ -39,7 +38,7 @@ public class SaberJoinRelToLogicalJoinRule  extends RelOptRule {
 	  @Override
 	  public void onMatch(RelOptRuleCall call) {
 		    assert matches(call);
-		    final SaberJoinRel join = call.rel(0);
+		    final EnumerableJoin join = call.rel(0);
 		    RelNode right = join.getRight();
 		    final RelNode left = join.getLeft();
 		    final RexNode condition = join.getCondition();

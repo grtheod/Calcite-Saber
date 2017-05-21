@@ -46,82 +46,88 @@ import calcite.planner.logical.SaberFilterRel;
 import calcite.planner.logical.SaberJoinRel;
 import calcite.planner.logical.SaberProjectRel;
 import calcite.planner.logical.SaberRelFactories;
-import calcite.planner.logical.rules.EnumerableAggregateToLogicalAggregateRule;
-import calcite.planner.logical.rules.EnumerableFilterToLogicalFilterRule;
-import calcite.planner.logical.rules.EnumerableJoinToLogicalJoinRule;
-import calcite.planner.logical.rules.EnumerableProjectToLogicalProjectRule;
-import calcite.planner.logical.rules.EnumerableTableScanToLogicalTableScanRule;
-import calcite.planner.logical.rules.EnumerableWindowToLogicalWindowRule;
 import calcite.planner.logical.rules.FilterPushThroughFilter;
 import calcite.planner.logical.rules.ProjectJoinRemoveRule;
-import calcite.planner.logical.rules.SaberAggregateRelToLogicalAggregateRule;
-import calcite.planner.logical.rules.SaberFilterRelToLogicalFilterRule;
-import calcite.planner.logical.rules.SaberJoinRelToLogicalJoinRule;
-import calcite.planner.logical.rules.SaberProjectRelToLogicalProjectRule;
-import calcite.planner.logical.rules.SaberTableScanRelToLogicalTableScanRule;
-import calcite.planner.logical.rules.SaberWindowRelToLogicalWindowRule;
+import calcite.planner.logical.rules.SaberCalcMergeRule;
+import calcite.planner.logical.rules.SaberFilterSaberCalcMergeRule;
+import calcite.planner.logical.rules.SaberFilterToSaberCalcRule;
+import calcite.planner.logical.rules.SaberProjectSaberCalcMergeRule;
+import calcite.planner.logical.rules.SaberProjectToSaberCalcRule;
+import calcite.planner.logical.rules.toLogicalRules.EnumerableAggregateToLogicalAggregateRule;
+import calcite.planner.logical.rules.toLogicalRules.EnumerableFilterToLogicalFilterRule;
+import calcite.planner.logical.rules.toLogicalRules.EnumerableJoinToLogicalJoinRule;
+import calcite.planner.logical.rules.toLogicalRules.EnumerableProjectToLogicalProjectRule;
+import calcite.planner.logical.rules.toLogicalRules.EnumerableTableScanToLogicalTableScanRule;
+import calcite.planner.logical.rules.toLogicalRules.EnumerableWindowToLogicalWindowRule;
+import calcite.planner.logical.rules.toLogicalRules.SaberAggregateRelToLogicalAggregateRule;
+import calcite.planner.logical.rules.toLogicalRules.SaberCalcToLogicalCalcRule;
+import calcite.planner.logical.rules.toLogicalRules.SaberFilterRelToLogicalFilterRule;
+import calcite.planner.logical.rules.toLogicalRules.SaberJoinRelToLogicalJoinRule;
+import calcite.planner.logical.rules.toLogicalRules.SaberProjectRelToLogicalProjectRule;
+import calcite.planner.logical.rules.toLogicalRules.SaberTableScanRelToLogicalTableScanRule;
+import calcite.planner.logical.rules.toLogicalRules.SaberWindowRelToLogicalWindowRule;
 
 public class SaberRuleSets {
 	public static final ImmutableList<RelOptRule> PRE_JOIN_ORDERING_RULES =
-			ImmutableList.of(				
-				ProjectToWindowRule.PROJECT,
-			   
-		        //1. Distinct aggregate rewrite
-			    // Run this optimization early, since it is expanding the operator pipeline.
-				AggregateExpandDistinctAggregatesRule.INSTANCE,
-				
-				// 2. Run exhaustive PPD, add not null filters, transitive inference,
-		        // constant propagation, constant folding
-				FilterAggregateTransposeRule.INSTANCE,
-				FilterProjectTransposeRule.INSTANCE,
-				//FilterMergeRule.INSTANCE,
-				FilterJoinRule.FILTER_ON_JOIN,
-				FilterJoinRule.JOIN, /*push filter into the children of a join*/
-				FilterPushThroughFilter.INSTANCE,
-				ReduceExpressionsRule.FILTER_INSTANCE,
-				ReduceExpressionsRule.PROJECT_INSTANCE,
-				ReduceExpressionsRule.JOIN_INSTANCE,    	    
-				//ReduceDecimalsRule.INSTANCE,
-				//maybe implement JoinAddNotNullRule.INSTANCE
-				JoinPushTransitivePredicatesRule.INSTANCE, //Planner rule that infers predicates from on a Join and creates Filter if those predicates can be pushed to its inputs.
-				AggregateProjectPullUpConstantsRule.INSTANCE,
-				AggregateReduceFunctionsRule.INSTANCE, 
-				AggregateRemoveRule.INSTANCE,				
-				
-		        // 3. Merge, remove and reduce Project if possible
-				ProjectRemoveRule.INSTANCE,
-				ProjectWindowTransposeRule.INSTANCE, 
-				ProjectMergeRule.INSTANCE,
-				//maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
-		        ProjectTableScanRule.INSTANCE,
-				
-			   	// 4. Prune empty result rules				
-				PruneEmptyRules.FILTER_INSTANCE,
-				PruneEmptyRules.PROJECT_INSTANCE,
-				PruneEmptyRules.AGGREGATE_INSTANCE,
-				PruneEmptyRules.JOIN_LEFT_INSTANCE,    
-				PruneEmptyRules.JOIN_RIGHT_INSTANCE,
-				
-				// 5. Enumerable Rules
-				EnumerableRules.ENUMERABLE_FILTER_RULE,
-				EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-				EnumerableRules.ENUMERABLE_PROJECT_RULE,
-				EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
-				EnumerableRules.ENUMERABLE_JOIN_RULE,
-				EnumerableRules.ENUMERABLE_WINDOW_RULE
-				//EnumerableRules.ENUMERABLE_VALUES_RULE //The VALUES clause creates an inline table with a given set of rows.
-														 //Streaming is disallowed. The set of rows never changes, and therefore 
-														 //a stream would never return any rows.*/					  
-				);
+		ImmutableList.of(				
+			ProjectToWindowRule.PROJECT,
+		   
+	        //1. Distinct aggregate rewrite
+		    // Run this optimization early, since it is expanding the operator pipeline.
+			AggregateExpandDistinctAggregatesRule.INSTANCE,
+			
+			// 2. Run exhaustive PPD, add not null filters, transitive inference,
+	        // constant propagation, constant folding
+			//FilterAggregateTransposeRule.INSTANCE,
+			//FilterProjectTransposeRule.INSTANCE,
+			//FilterMergeRule.INSTANCE,
+			FilterJoinRule.FILTER_ON_JOIN,
+			FilterJoinRule.JOIN, /*push filter into the children of a join*/
+			FilterPushThroughFilter.INSTANCE,
+			ReduceExpressionsRule.FILTER_INSTANCE,
+			ReduceExpressionsRule.PROJECT_INSTANCE,
+			ReduceExpressionsRule.JOIN_INSTANCE,    	    
+			//ReduceDecimalsRule.INSTANCE,
+			//maybe implement JoinAddNotNullRule.INSTANCE
+			JoinPushTransitivePredicatesRule.INSTANCE, //Planner rule that infers predicates from on a Join and creates Filter if those predicates can be pushed to its inputs.
+			AggregateProjectPullUpConstantsRule.INSTANCE,
+			AggregateReduceFunctionsRule.INSTANCE, 
+			AggregateRemoveRule.INSTANCE,				
+			
+	        // 3. Merge, remove and reduce Project if possible
+			ProjectRemoveRule.INSTANCE,
+			ProjectWindowTransposeRule.INSTANCE, 
+			ProjectMergeRule.INSTANCE,
+			//maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
+	        ProjectTableScanRule.INSTANCE,
+			
+		   	// 4. Prune empty result rules				
+			PruneEmptyRules.FILTER_INSTANCE,
+			PruneEmptyRules.PROJECT_INSTANCE,
+			PruneEmptyRules.AGGREGATE_INSTANCE,
+			PruneEmptyRules.JOIN_LEFT_INSTANCE,    
+			PruneEmptyRules.JOIN_RIGHT_INSTANCE,
+			
+			// 5. Enumerable Rules
+			EnumerableRules.ENUMERABLE_FILTER_RULE,
+			EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
+			EnumerableRules.ENUMERABLE_PROJECT_RULE,
+			EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
+			EnumerableRules.ENUMERABLE_JOIN_RULE,
+			EnumerableRules.ENUMERABLE_WINDOW_RULE
+			//EnumerableRules.ENUMERABLE_VALUES_RULE //The VALUES clause creates an inline table with a given set of rows.
+													 //Streaming is disallowed. The set of rows never changes, and therefore 
+													 //a stream would never return any rows.*/					  
+		);
 	
 	//These rules can only be used in Volcano Planner
 	public static final ImmutableList<RelOptRule> EXHAUSTIVE_JOIN_ORDERING_RULES =
 		ImmutableList.of(
-				JoinPushThroughJoinRule.LEFT,
-				JoinPushThroughJoinRule.RIGHT,
-				JoinAssociateRule.INSTANCE,
-				JoinCommuteRule.INSTANCE
-				);
+			JoinPushThroughJoinRule.LEFT,
+			JoinPushThroughJoinRule.RIGHT,
+			JoinAssociateRule.INSTANCE,
+			JoinCommuteRule.INSTANCE
+		);
 	
 	static final RelOptRule SABER_JOIN_PUSH_THROUGH_JOIN_RULE_RIGHT = new JoinPushThroughJoinRule("JoinPushThroughJoinRule", true, SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
 	
@@ -132,11 +138,11 @@ public class SaberRuleSets {
 	
 	public static final ImmutableList <RelOptRule> EXHAUSTIVE_JOIN_ORDERING_RULES_FOR_RATE = 
 		ImmutableList.of(
-				SABER_JOIN_PUSH_THROUGH_JOIN_RULE_RIGHT,
-				SABER_JOIN_PUSH_THROUGH_JOIN_RULE_LEFT,
-				JoinAssociateRule.INSTANCE,
-				SABER_JOIN_COMMUTE_RULE
-				);			
+			SABER_JOIN_PUSH_THROUGH_JOIN_RULE_RIGHT,
+			SABER_JOIN_PUSH_THROUGH_JOIN_RULE_LEFT,
+			JoinAssociateRule.INSTANCE,
+			SABER_JOIN_COMMUTE_RULE
+		);			
 	
 	static final RelOptRule SABER_AGGREGATE_JOIN_TRANSPOSE_RULE = new AggregateJoinTransposeRule(SaberAggregateRel.class, 
 														SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER, true); //EXTENDED??
@@ -154,21 +160,21 @@ public class SaberRuleSets {
 	
 	public static final ImmutableList<RelOptRule> VOLCANO_RULES =
 		ImmutableList.of(
-				SABER_FILTER_PUSH_THROUGH_FILTER,
-				SABER_AGGREGATE_JOIN_TRANSPOSE_RULE,
-				SABER_FILTER_AGGREGATE_TRANSPOSE_RULE,
-				SABER_FILTER_PROJECT_TRANSPOSE_RULE,
-				SABER_PROJECT_FILTER_TRANSPOSE_RULE,
-				//SABER_PROJECT_JOIN_TRANSPOSE_RULE, //Test it better with Join Reordering!!
-				SABER_PROJECT_MERGE_RULE
-				);
+			SABER_FILTER_PUSH_THROUGH_FILTER,
+			SABER_AGGREGATE_JOIN_TRANSPOSE_RULE,
+			SABER_FILTER_AGGREGATE_TRANSPOSE_RULE,
+			SABER_FILTER_PROJECT_TRANSPOSE_RULE,
+			SABER_PROJECT_FILTER_TRANSPOSE_RULE,
+			//SABER_PROJECT_JOIN_TRANSPOSE_RULE, //Test it better with Join Reordering!!
+			SABER_PROJECT_MERGE_RULE
+		);
 	
 	//These rules are only capable of producing left-deep joins
 	public static final ImmutableList<RelOptRule> HEURISTIC_JOIN_ORDERING_RULES =
 		ImmutableList.of(
-					JoinToMultiJoinRule.INSTANCE ,
-					LoptOptimizeJoinRule.INSTANCE
-				);
+			JoinToMultiJoinRule.INSTANCE ,
+			LoptOptimizeJoinRule.INSTANCE
+		);
 	
 	static final RelOptRule SABER_JOIN_TO_MULTIJOIN_RULE = new JoinToMultiJoinRule(SaberJoinRel.class);
 	static final RelOptRule SABER_LOPT_OPTIMIZE_JOIN_RULE = new LoptOptimizeJoinRule(
@@ -177,148 +183,158 @@ public class SaberRuleSets {
 											      SaberRelFactories.SABER_LOGICAL_FILTER_FACTORY);
 	
 	public static final ImmutableList<RelOptRule> HEURISTIC_JOIN_ORDERING_RULES_2 =
-			ImmutableList.of(
-						SABER_JOIN_TO_MULTIJOIN_RULE ,
-						SABER_LOPT_OPTIMIZE_JOIN_RULE
-						//ProjectRemoveRule.INSTANCE,
-						//SABER_PROJECT_MERGE_RULE,
-						//SABER_PROJECT_JOIN_TRANSPOSE_RULE
-					);
-	
+		ImmutableList.of(
+			SABER_JOIN_TO_MULTIJOIN_RULE ,
+			SABER_LOPT_OPTIMIZE_JOIN_RULE
+			//ProjectRemoveRule.INSTANCE,
+			//SABER_PROJECT_MERGE_RULE,
+			//SABER_PROJECT_JOIN_TRANSPOSE_RULE
+		);
+
 	//These rules produce bushy joins
 	public static final ImmutableList<RelOptRule> HEURISTIC_BUSHY_JOIN_ORDERING_RULES =
 		ImmutableList.of(
-		   	        JoinToMultiJoinRule.INSTANCE ,
-		   	        MultiJoinOptimizeBushyRule.INSTANCE
-				);		
+   	        JoinToMultiJoinRule.INSTANCE ,
+   	        MultiJoinOptimizeBushyRule.INSTANCE
+		);		
 
 	public static final ImmutableList<RelOptRule> AFTER_JOIN_RULES =
 		ImmutableList.of(
-				// 1. Run other optimizations that do not need stats
-				JoinPushExpressionsRule.INSTANCE,
-				AggregateProjectMergeRule.INSTANCE,
-				ProjectJoinTransposeRule.INSTANCE,
-				//ProjectJoinRemoveRule.INSTANCE,
-				//JoinCommuteRule.INSTANCE,
-			        
-		        // 2. Run aggregate-join transpose (cost based)
-				AggregateJoinTransposeRule.EXTENDED,
+			// 1. Run other optimizations that do not need stats
+			JoinPushExpressionsRule.INSTANCE,
+			AggregateProjectMergeRule.INSTANCE,
+			ProjectJoinTransposeRule.INSTANCE,
+			//ProjectJoinRemoveRule.INSTANCE,
+			//JoinCommuteRule.INSTANCE,
+		        
+	        // 2. Run aggregate-join transpose (cost based)
+			AggregateJoinTransposeRule.EXTENDED,
 
-		        // 3. Run rule to fix windowing issue when it is done over aggregation columns
-				//ProjectToWindowRule.PROJECT,
-				ProjectWindowTransposeRule.INSTANCE,
-				ProjectRemoveRule.INSTANCE,
-				ProjectMergeRule.INSTANCE
+	        // 3. Run rule to fix windowing issue when it is done over aggregation columns
+			//ProjectToWindowRule.PROJECT,
+			ProjectWindowTransposeRule.INSTANCE,
+			ProjectRemoveRule.INSTANCE,
+			ProjectMergeRule.INSTANCE
 				
-				);		
+		);		
 
 	static final RelOptRule SABER_JOIN_PUSH_EXPRESSIONS_RULE = new JoinPushExpressionsRule(SaberJoinRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
 	
 	static final RelOptRule SABER_AGGREGATE_PROJECT_MERGE_RULE = new AggregateProjectMergeRule(SaberAggregateRel.class, SaberProjectRel.class, SaberRelFactories.SABER_LOGICAL_BUILDER);
 		
 	public static final ImmutableList<RelOptRule> AFTER_JOIN_RULES_2=
-			ImmutableList.of(
-					// 1. Run other optimizations that do not need stats
-					SABER_JOIN_PUSH_EXPRESSIONS_RULE,
-					SABER_AGGREGATE_PROJECT_MERGE_RULE,
-					//ProjectJoinRemoveRule.INSTANCE,
-					//JoinCommuteRule.INSTANCE,
-				        
-			        // 2. Run aggregate-join transpose (cost based)
-					SABER_AGGREGATE_JOIN_TRANSPOSE_RULE,
+		ImmutableList.of(
+			// 1. Run other optimizations that do not need stats
+			SABER_JOIN_PUSH_EXPRESSIONS_RULE,
+			SABER_AGGREGATE_PROJECT_MERGE_RULE,
+			//ProjectJoinRemoveRule.INSTANCE,
+			//JoinCommuteRule.INSTANCE,
+		        
+	        // 2. Run aggregate-join transpose (cost based)
+			SABER_AGGREGATE_JOIN_TRANSPOSE_RULE,
 
-			        // 3. Run rule to fix windowing issue when it is done over aggregation columns
-					//ProjectToWindowRule.PROJECT,
-					//ProjectWindowTransposeRule.INSTANCE
-					
-					//SABER_PROJECT_JOIN_TRANSPOSE_RULE,
-					ProjectRemoveRule.INSTANCE,
-					SABER_PROJECT_MERGE_RULE
-					);	
+	        // 3. Run rule to fix windowing issue when it is done over aggregation columns
+			//ProjectToWindowRule.PROJECT,
+			//ProjectWindowTransposeRule.INSTANCE
+			
+			//SABER_PROJECT_JOIN_TRANSPOSE_RULE,
+			ProjectRemoveRule.INSTANCE,
+			SABER_PROJECT_MERGE_RULE
+		);	
 
 	public static final ImmutableList<RelOptRule> PROJECT_PUSH_DOWN =
-			ImmutableList.of(
-					SABER_PROJECT_JOIN_TRANSPOSE_RULE,
-					ProjectRemoveRule.INSTANCE,
-					SABER_PROJECT_MERGE_RULE
-					);	
+		ImmutableList.of(
+			SABER_PROJECT_JOIN_TRANSPOSE_RULE,
+			ProjectRemoveRule.INSTANCE,
+			SABER_PROJECT_MERGE_RULE
+		);
+	
+	public static final ImmutableList<RelOptRule> SABER_CALC_RULES =
+		ImmutableList.of(
+			SaberFilterToSaberCalcRule.INSTANCE,
+			SaberProjectToSaberCalcRule.INSTANCE,
+			SaberFilterSaberCalcMergeRule.INSTANCE,
+			SaberProjectSaberCalcMergeRule.INSTANCE,
+			SaberCalcMergeRule.INSTANCE
+		);	
 	
 	public static final ImmutableList<RelOptRule> CONVERT_TO_LOGICAL_RULES =
 		ImmutableList.of(
-				EnumerableJoinToLogicalJoinRule.INSTANCE,
-				EnumerableProjectToLogicalProjectRule.INSTANCE,
-				EnumerableFilterToLogicalFilterRule.INSTANCE,
-				EnumerableAggregateToLogicalAggregateRule.INSTANCE,
-				EnumerableTableScanToLogicalTableScanRule.INSTANCE,
-				EnumerableWindowToLogicalWindowRule.INSTANCE
-				);
+			EnumerableJoinToLogicalJoinRule.INSTANCE,
+			EnumerableProjectToLogicalProjectRule.INSTANCE,
+			EnumerableFilterToLogicalFilterRule.INSTANCE,
+			EnumerableAggregateToLogicalAggregateRule.INSTANCE,
+			EnumerableTableScanToLogicalTableScanRule.INSTANCE,
+			EnumerableWindowToLogicalWindowRule.INSTANCE
+		);
 	
 	public static final ImmutableList<RelOptRule> CONVERT_TO_LOGICAL_RULES_2 =
 		ImmutableList.of(
-				SaberJoinRelToLogicalJoinRule.INSTANCE,
-				SaberProjectRelToLogicalProjectRule.INSTANCE,
-				SaberFilterRelToLogicalFilterRule.INSTANCE,
-				SaberAggregateRelToLogicalAggregateRule.INSTANCE,
-				SaberTableScanRelToLogicalTableScanRule.INSTANCE,
-				SaberWindowRelToLogicalWindowRule.INSTANCE,
-				ProjectWindowTransposeRule.INSTANCE
-				);
+			SaberJoinRelToLogicalJoinRule.INSTANCE,
+			SaberProjectRelToLogicalProjectRule.INSTANCE,
+			SaberFilterRelToLogicalFilterRule.INSTANCE,
+			SaberAggregateRelToLogicalAggregateRule.INSTANCE,
+			SaberTableScanRelToLogicalTableScanRule.INSTANCE,
+			SaberWindowRelToLogicalWindowRule.INSTANCE,
+			SaberCalcToLogicalCalcRule.INSTANCE,
+			ProjectWindowTransposeRule.INSTANCE
+		);
 	
 	public static final ImmutableList<RelOptRule> WINDOW_REWRITE_RULES =
 		ImmutableList.of(
-				ProjectToWindowRule.PROJECT,
-				ReduceExpressionsRule.PROJECT_INSTANCE
-				);
+			ProjectToWindowRule.PROJECT,
+			ReduceExpressionsRule.PROJECT_INSTANCE
+		);
 	
 	public static final ImmutableList<RelOptRule> PRE_VOLCANO_STATIC_RULES =
 		ImmutableList.of(
-		        //1. Distinct aggregate rewrite
-			    // Run this optimization early, since it is expanding the operator pipeline.
-				AggregateExpandDistinctAggregatesRule.INSTANCE,
-				
-		        // 2. Merge, remove and reduce Project if possible
-				ProjectRemoveRule.INSTANCE,
-				ProjectWindowTransposeRule.INSTANCE, 
-				ProjectMergeRule.INSTANCE,
-				//maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
-		        ProjectTableScanRule.INSTANCE,
-				
-				// 3. Run exhaustive PPD, add not null filters, transitive inference,
-		        // constant propagation, constant folding
-		        //FilterMergeRule.INSTANCE,
-				FilterAggregateTransposeRule.INSTANCE,
-				FilterProjectTransposeRule.INSTANCE,
-				//FilterPushThroughFilter.INSTANCE,				
-				FilterJoinRule.FILTER_ON_JOIN, // add support for WHERE style Joins with the following three rules
-				FilterJoinRule.JOIN,
-				// FilterRemoveIsNotDistinctFromRule.INSTANCE,
-				JoinPushExpressionsRule.INSTANCE,				
-				ReduceExpressionsRule.FILTER_INSTANCE,
-				ReduceExpressionsRule.PROJECT_INSTANCE,
-				ReduceExpressionsRule.JOIN_INSTANCE,    	    
-				//ReduceDecimalsRule.INSTANCE,
-				//maybe implement JoinAddNotNullRule.INSTANCE
-				JoinPushTransitivePredicatesRule.INSTANCE, //Planner rule that infers predicates from on a Join and creates Filter if those predicates can be pushed to its inputs.
-				AggregateProjectPullUpConstantsRule.INSTANCE,
-				AggregateReduceFunctionsRule.INSTANCE, 
-				AggregateRemoveRule.INSTANCE,				
-								
-			   	// 4. Prune empty result rules				
-				PruneEmptyRules.FILTER_INSTANCE,
-				PruneEmptyRules.PROJECT_INSTANCE,
-				PruneEmptyRules.AGGREGATE_INSTANCE,
-				PruneEmptyRules.JOIN_LEFT_INSTANCE,    
-				PruneEmptyRules.JOIN_RIGHT_INSTANCE	
+	        //1. Distinct aggregate rewrite
+		    // Run this optimization early, since it is expanding the operator pipeline.
+			AggregateExpandDistinctAggregatesRule.INSTANCE,
+			
+	        // 2. Merge, remove and reduce Project if possible
+			ProjectRemoveRule.INSTANCE,
+			ProjectWindowTransposeRule.INSTANCE, 
+			ProjectMergeRule.INSTANCE,
+			//maybe implement ProjectFilterPullUpConstantsRule.INSTANCE
+	        ProjectTableScanRule.INSTANCE,
+			
+			// 3. Run exhaustive PPD, add not null filters, transitive inference,
+	        // constant propagation, constant folding
+	        //FilterMergeRule.INSTANCE,
+			FilterAggregateTransposeRule.INSTANCE,
+			FilterProjectTransposeRule.INSTANCE,
+			//FilterPushThroughFilter.INSTANCE,				
+			FilterJoinRule.FILTER_ON_JOIN, // add support for WHERE style Joins with the following three rules
+			FilterJoinRule.JOIN,
+			// FilterRemoveIsNotDistinctFromRule.INSTANCE,
+			JoinPushExpressionsRule.INSTANCE,				
+			ReduceExpressionsRule.FILTER_INSTANCE,
+			ReduceExpressionsRule.PROJECT_INSTANCE,
+			ReduceExpressionsRule.JOIN_INSTANCE,    	    
+			//ReduceDecimalsRule.INSTANCE,
+			//maybe implement JoinAddNotNullRule.INSTANCE
+			JoinPushTransitivePredicatesRule.INSTANCE, //Planner rule that infers predicates from on a Join and creates Filter if those predicates can be pushed to its inputs.
+			AggregateProjectPullUpConstantsRule.INSTANCE,
+			AggregateReduceFunctionsRule.INSTANCE, 
+			AggregateRemoveRule.INSTANCE,				
+							
+		   	// 4. Prune empty result rules				
+			PruneEmptyRules.FILTER_INSTANCE,
+			PruneEmptyRules.PROJECT_INSTANCE,
+			PruneEmptyRules.AGGREGATE_INSTANCE,
+			PruneEmptyRules.JOIN_LEFT_INSTANCE,    
+			PruneEmptyRules.JOIN_RIGHT_INSTANCE	
 															
-				);
+		);
 	
 	public static final ImmutableList<RelOptRule> NO_OPTIMIZATION_RULES =
 		ImmutableList.of(
-				ProjectToWindowRule.PROJECT,
-				//FilterJoinRule.FILTER_ON_JOIN,
-				//FilterJoinRule.JOIN,
-				ProjectMergeRule.INSTANCE // maybe remove this
-				);	
+			ProjectToWindowRule.PROJECT,
+			//FilterJoinRule.FILTER_ON_JOIN,
+			//FilterJoinRule.JOIN,
+			ProjectMergeRule.INSTANCE // maybe remove this
+		);	
 	/**
 	 * Converter rule set that converts from Calcite logical convention to Saber physical convention.
 	 */
