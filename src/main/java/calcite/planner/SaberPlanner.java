@@ -48,6 +48,7 @@ import com.google.common.collect.Lists;
 import calcite.cost.SaberCostBase;
 import calcite.cost.SaberRelOptCostFactory;
 import calcite.planner.logical.SaberRel;
+import calcite.planner.logical.rules.SaberCalcAggregateCalcToSaberAggrCalcRule;
 import calcite.planner.logical.rules.converter.SaberLogicalAggregateRule;
 import calcite.planner.logical.rules.converter.SaberLogicalFilterRule;
 import calcite.planner.logical.rules.converter.SaberLogicalJoinRule;
@@ -247,6 +248,11 @@ public class SaberPlanner {
 	    		ImmutableList<RelOptRule> saberCalcRules = SaberRuleSets.SABER_CALC_RULES;
 	    		afterJoinPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP,
 	    				saberCalcRules.toArray(new RelOptRule[saberCalcRules.size()]) );
+	    		
+	    		// Optimization Phase 5.d
+/*	    		System.out.println("Optimization Phase 5.d : Applying AggrCalc rules with HepPlanner...");
+	    		RelOptRule saberAggrCalcRules = SaberCalcAggregateCalcToSaberAggrCalcRule.INSTANCE; //SaberRuleSets.SABER_AGGR_CALC_RULES;
+	    		afterJoinPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP, saberAggrCalcRules);*/
 	    		
 	    		// Print here the final Cost
 	    		System.out.println ();

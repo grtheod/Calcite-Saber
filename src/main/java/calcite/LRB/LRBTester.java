@@ -41,13 +41,13 @@ public class LRBTester {
 		boolean useRatesCostModel = true;
 		
 		// execute determines whether the plan is executed or not
-		boolean execute = false;
+		boolean execute = true;
 		
 		// greedyJoinOrder determines which rules will be chosen for the join ordering
 		boolean greedyJoinOrder = true;
 		
 		// noOptimization determines whether optimization rules will be applied or not
-		boolean noOptimization = true;
+		boolean noOptimization = false;
 		
 		// compute all plans
 		boolean allPlans =  false;

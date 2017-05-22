@@ -111,7 +111,7 @@ public class PhysicalRuleConverter {
 			
 			return new Pair<Integer, String>(chainTail.getId(),chainTail.getRelTypeName());			
 		} else
-		if (children.size() == 1) { //aggregate,window, filter or project operator
+		if (children.size() == 1) { // aggregate, window, filter, project or calc operator
 			chainTail = children.get(0);
 			Pair <Integer, String> node = convertMultipleRelNodes(chainTail);
 			
@@ -122,7 +122,8 @@ public class PhysicalRuleConverter {
 			RuleAssembler operation = new RuleAssembler(logicalPlan.getRelTypeName(), logicalPlan, chain.getOutputSchema(), queryId, timestampReference, chain.getWindow(), chain.getWindowOffset(), chain.getWindowBarrier(), batchSize);
 			SaberRule rule = operation.construct();
 		    
-			if ((logicalPlan.getRelTypeName().equals("LogicalAggregate")) || (logicalPlan.getRelTypeName().equals("LogicalWindow"))) {
+			if ((logicalPlan.getRelTypeName().equals("LogicalAggregate")) || (logicalPlan.getRelTypeName().equals("LogicalWindow"))
+					|| (logicalPlan.getRelTypeName().equals("SaberAggrCalcRel")) ) {
 				aggregates.add(rule);
 			}
 		    

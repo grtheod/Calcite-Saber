@@ -47,7 +47,7 @@ public class Tester {
 		boolean useRatesCostModel = true;
 		
 		// execute determines whether the plan is executed or not
-		boolean execute = false;
+		boolean execute = true;
 		
 		// greedyJoinOrder determines which rules will be chosen for the join ordering
 		boolean greedyJoinOrder = true;
@@ -163,7 +163,7 @@ public class Tester {
 		SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
 		
 		// set manually input rates according to the input sources
-		ArrayList<Integer> inputRates = new ArrayList<Integer>(Arrays.asList(100, 100000, 400, 100, 400));
+		ArrayList<Integer> inputRates = new ArrayList<Integer>(Arrays.asList(100, 500, 400, 100, 400));
 		
 		schema.add("customers", new CustomersTableFactory(inputRates.get(0)).create(schema, "customers", null, null, useRatesCostModel));
 		schema.add("orders", new OrdersTableFactory(inputRates.get(1)).create(schema, "orders", null, null, useRatesCostModel));

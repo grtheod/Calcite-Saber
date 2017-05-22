@@ -48,6 +48,7 @@ import calcite.planner.logical.SaberProjectRel;
 import calcite.planner.logical.SaberRelFactories;
 import calcite.planner.logical.rules.FilterPushThroughFilter;
 import calcite.planner.logical.rules.ProjectJoinRemoveRule;
+import calcite.planner.logical.rules.SaberCalcAggregateCalcToSaberAggrCalcRule;
 import calcite.planner.logical.rules.SaberCalcMergeRule;
 import calcite.planner.logical.rules.SaberFilterSaberCalcMergeRule;
 import calcite.planner.logical.rules.SaberFilterToSaberCalcRule;
@@ -256,7 +257,12 @@ public class SaberRuleSets {
 			SaberFilterSaberCalcMergeRule.INSTANCE,
 			SaberProjectSaberCalcMergeRule.INSTANCE,
 			SaberCalcMergeRule.INSTANCE
-		);	
+		);
+	
+/*	public static final ImmutableList<RelOptRule> SABER_AGGR_CALC_RULES =
+			ImmutableList.of(
+				SaberCalcAggregateCalcToSaberAggrCalcRule.INSTANCE
+			);	*/
 	
 	public static final ImmutableList<RelOptRule> CONVERT_TO_LOGICAL_RULES =
 		ImmutableList.of(
