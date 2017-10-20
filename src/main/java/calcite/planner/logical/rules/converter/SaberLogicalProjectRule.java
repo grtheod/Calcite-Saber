@@ -6,7 +6,6 @@ import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalProject;
 
-import calcite.planner.logical.SaberLogicalConvention;
 import calcite.planner.logical.SaberProjectRel;
 import calcite.planner.logical.SaberRel;
 

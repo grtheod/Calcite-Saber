@@ -7,7 +7,6 @@ import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rex.RexProgram;
 
 import calcite.planner.common.SaberCalcRelBase;
-import calcite.planner.logical.SaberRel.SaberRelVisitor;
 
 public class SaberCalcRel extends SaberCalcRelBase implements SaberRel {
 	

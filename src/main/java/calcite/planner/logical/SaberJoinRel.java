@@ -1,7 +1,5 @@
 package calcite.planner.logical;
 
-import java.util.Collections;
-import java.util.Set;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
@@ -10,7 +8,6 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.util.ImmutableIntList;
 
 import calcite.planner.common.SaberJoinRelBase;
 

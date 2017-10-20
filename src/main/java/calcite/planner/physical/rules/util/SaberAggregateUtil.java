@@ -3,9 +3,7 @@ package calcite.planner.physical.rules.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 

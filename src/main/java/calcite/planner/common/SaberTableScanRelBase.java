@@ -8,7 +8,6 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 
-import calcite.cost.SaberCostBase;
 import calcite.cost.SaberCostBase.SaberCostFactory;
 
 public class SaberTableScanRelBase extends TableScan implements SaberRelNode {

@@ -1,7 +1,6 @@
 package calcite.planner.common;
 
 import java.util.Collections;
-import java.util.Set;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -12,7 +11,6 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.util.ImmutableIntList;
 
 import calcite.cost.SaberCostBase;
 import calcite.cost.SaberCostBase.SaberCostFactory;

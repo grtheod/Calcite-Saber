@@ -10,15 +10,11 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.util.Pair;
 
 import calcite.cost.SaberCostBase;
 import calcite.cost.SaberCostBase.SaberCostFactory;
 import calcite.planner.physical.ExpressionBuilder;
-import uk.ac.imperial.lsds.saber.WindowDefinition.WindowType;
-import uk.ac.imperial.lsds.saber.cql.expressions.Expression;
 
 public abstract class SaberProjectRelBase extends Project implements SaberRelNode {
 	

@@ -250,9 +250,9 @@ public class SaberPlanner {
 	    				saberCalcRules.toArray(new RelOptRule[saberCalcRules.size()]) );
 	    		
 	    		// Optimization Phase 5.d
-/*	    		System.out.println("Optimization Phase 5.d : Applying AggrCalc rules with HepPlanner...");
+	    		System.out.println("Optimization Phase 5.d : Applying AggrCalc rules with HepPlanner...");
 	    		RelOptRule saberAggrCalcRules = SaberCalcAggregateCalcToSaberAggrCalcRule.INSTANCE; //SaberRuleSets.SABER_AGGR_CALC_RULES;
-	    		afterJoinPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP, saberAggrCalcRules);*/
+	    		afterJoinPlan = hepOptimization(afterJoinPlan, HepMatchOrder.BOTTOM_UP, saberAggrCalcRules);
 	    		
 	    		// Print here the final Cost
 	    		System.out.println ();

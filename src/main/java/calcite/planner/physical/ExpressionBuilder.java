@@ -6,7 +6,6 @@ import java.util.List;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.util.Pair;
 
 import uk.ac.imperial.lsds.saber.cql.expressions.Expression;

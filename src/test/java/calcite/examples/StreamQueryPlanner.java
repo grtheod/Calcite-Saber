@@ -28,8 +28,6 @@ import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.RuleSets;
 import org.apache.calcite.tools.ValidationException;
 
-import calcite.planner.QueryPlanner;
-
 public class StreamQueryPlanner {
 
 	private final Planner planner;

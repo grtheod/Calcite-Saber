@@ -41,7 +41,7 @@ public class LRBTester {
 		boolean useRatesCostModel = true;
 		
 		// execute determines whether the plan is executed or not
-		boolean execute = true;
+		boolean execute = false;
 		
 		// greedyJoinOrder determines which rules will be chosen for the join ordering
 		boolean greedyJoinOrder = true;
