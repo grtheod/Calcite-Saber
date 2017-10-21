@@ -29,6 +29,7 @@ public class SaberCalcUtil implements SaberRuleUtil{
 	int batchSize;
 	QueryOperator calcOperator;
 	Set<QueryOperator> calcOperators;
+	boolean validCalc;
 	
 	public SaberCalcUtil(RexProgram program, int batchSize, ITupleSchema schema, WindowDefinition window, int windowOffset, int windowBarrier) {
 		this.program = program;
@@ -77,12 +78,13 @@ public class SaberCalcUtil implements SaberRuleUtil{
 			SaberProjectUtil project = new SaberProjectUtil(projectedAttrs, batchSize, schema, window, windowOffset, windowBarrier);
 			project.build();
 			
-			if (project.isValid()) {
+			outputSchema = project.getOutputSchema();
+			validCalc = project.isValid();
+			if (validCalc) {
 				cpuCode = project.getCpuCode();
 				gpuCode = project.getGpuCode();
 				
 				calcOperators.add(project.getOperator());
-				outputSchema = project.getOutputSchema();
 				
 				// make possible changes in window definition
 				windowType = project.getWindow().getWindowType();
@@ -91,6 +93,9 @@ public class SaberCalcUtil implements SaberRuleUtil{
 				window = new WindowDefinition (windowType, windowRange, windowSlide);
 			}
 	    }
+	    
+	    if (programCondition != null  && !validCalc)
+	    	validCalc = true;
 			
 		if (programCondition == null && (projectList == null || projectList.isEmpty())) {
 			// it shouldn't be happen
@@ -133,4 +138,7 @@ public class SaberCalcUtil implements SaberRuleUtil{
 		return this.calcOperators;
 	}
 
+	public boolean isValid () {
+		return this.validCalc;
+	}
 }

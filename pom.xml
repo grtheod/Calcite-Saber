@@ -199,7 +199,7 @@
 		  <groupId>com.googlecode.addjars-maven-plugin</groupId>
 		  <artifactId>addjars-maven-plugin</artifactId>
 		  <version>1.0.2</version>
- 		  <executions>
+		  <executions>
 		    <execution>
 		        <goals>
 		            <goal>add-jars</goal>

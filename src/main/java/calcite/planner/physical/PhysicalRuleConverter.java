@@ -19,6 +19,8 @@ import uk.ac.imperial.lsds.saber.QueryApplication;
 import uk.ac.imperial.lsds.saber.SystemConf;
 import uk.ac.imperial.lsds.saber.cql.operators.IAggregateOperator;
 
+import calcite.planner.physical.rules.SaberProjectRule;
+
 public class PhysicalRuleConverter {
 	
 	private final static Logger log = LogManager.getLogger (PhysicalRuleConverter.class);
@@ -127,19 +129,22 @@ public class PhysicalRuleConverter {
 				aggregates.add(rule);
 			}
 		    
-			Query query = rule.getQuery();
-			System.out.println("Current query id : "+ query.getId());
-			queryId++; //increment the queryId for the next query
-			if (!(node.right.equals("LogicalTableScan"))) {
-			    chain.getQuery().connectTo(query);
-			    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,false,rule.getWindowOffset().left,rule.getWindowOffset().right));
-			} else { 
-				//the first operator after LogicalTableScan is assigned to process the input data
-				chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,true,rule.getWindowOffset().left,rule.getWindowOffset().right));
-			}
-			queries.add(query); 		    		    		   		    
-			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
+			// Deal with redundant projections
+			if (((logicalPlan.getRelTypeName().equals("LogicalProject") || logicalPlan.getRelTypeName().equals("LogicalCalc")) && ((SaberProjectRule) rule).isValid()) || !(logicalPlan.getRelTypeName().equals("LogicalProject")) && logicalPlan.getRelTypeName().equals("LogicalCalc")) {
 			
+				Query query = rule.getQuery();
+				System.out.println("Current query id : "+ query.getId());
+				queryId++; //increment the queryId for the next query
+				if (!(node.right.equals("LogicalTableScan"))) {
+				    chain.getQuery().connectTo(query);
+				    chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,false,rule.getWindowOffset().left,rule.getWindowOffset().right));
+				} else { 
+					//the first operator after LogicalTableScan is assigned to process the input data
+					chains.put(logicalPlan.getId(), new ChainOfRules(query,rule.getOutputSchema(),rule.getWindow(),chain.getData(),false,true,rule.getWindowOffset().left,rule.getWindowOffset().right));
+				}
+				queries.add(query); 		    		    		   		    
+			System.out.println("OutputSchema : " + rule.getOutputSchema().getSchema());
+			}
 			return new Pair<Integer, String>(logicalPlan.getId(),logicalPlan.getRelTypeName());
 		} else
 		if (children.size() == 2) { //join operator

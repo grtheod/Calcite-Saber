@@ -35,6 +35,7 @@ public class SaberProjectRule implements SaberRule {
 	int windowOffset;
 	int windowBarrier;
 	int batchSize;
+	boolean validProject;
 	
 	public SaberProjectRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int windowOffset, int windowBarrier, int batchSize) {
 		this.schema = schema;
@@ -62,17 +63,22 @@ public class SaberProjectRule implements SaberRule {
 		SaberProjectUtil proj = new SaberProjectUtil(logProj.getChildExps(), batchSize, schema, window, windowOffset, windowBarrier);
 		proj.build();
 		
-		operators.add(proj.getOperator());
-		
-		windowType = proj.getWindow().getWindowType();
-		windowRange = proj.getWindow().getSize();
-		windowSlide = proj.getWindow().getSlide();
 		outputSchema = proj.getOutputSchema();
-	    
-		WindowDefinition executionWindow = new WindowDefinition (WindowType.ROW_BASED, 1, 1);
-		System.out.println("Window is : " + executionWindow.getWindowType().toString() + " with " + executionWindow.toString());
-		
-		query = new Query (queryId, operators, schema, executionWindow, null, null, queryConf, timestampReference);
+		validProject = proj.isValid();
+		if (validProject) {
+			operators.add(proj.getOperator());
+			
+			windowType = proj.getWindow().getWindowType();
+			windowRange = proj.getWindow().getSize();
+			windowSlide = proj.getWindow().getSlide();
+		    
+			WindowDefinition executionWindow = new WindowDefinition (WindowType.ROW_BASED, 1, 1);
+			System.out.println("Window is : " + executionWindow.getWindowType().toString() + " with " + executionWindow.toString());
+			
+			query = new Query (queryId, operators, outputSchema, executionWindow, null, null, queryConf, timestampReference);
+		}
+		else
+			System.out.println("The projection is skipped");
 		
 		//resize the window according to possible changes from input
 		window = new WindowDefinition (windowType, windowRange, windowSlide);
@@ -105,6 +111,10 @@ public class SaberProjectRule implements SaberRule {
 
 	public Pair<Integer, Integer> getWindowOffset() {
 		return new Pair<Integer, Integer>(0,0);
+	}
+	
+	public boolean isValid() {
+		return validProject;
 	}
 	
 }

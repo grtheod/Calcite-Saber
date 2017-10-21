@@ -36,6 +36,7 @@ public class SaberCalcRule implements SaberRule {
 	int windowOffset;
 	int windowBarrier;
 	int batchSize;
+	boolean validCalc;
 	
 	public SaberCalcRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int windowOffset, int windowBarrier, int batchSize) {
 		this.schema = schema;
@@ -64,13 +65,23 @@ public class SaberCalcRule implements SaberRule {
 		SaberCalcUtil calc = new SaberCalcUtil(program, batchSize, schema, window, windowOffset, windowBarrier);
 		calc.build();
 		
-		for ( QueryOperator op : calc.getCalcOperators()) {
-			operators.add(op);
-		}
-		windowType = calc.getWindow().getWindowType();
-		windowRange = calc.getWindow().getSize();
-		windowSlide = calc.getWindow().getSlide();
 		outputSchema = calc.getOutputSchema();
+		validCalc = calc.isValid();
+		if (validCalc) {			
+			for ( QueryOperator op : calc.getCalcOperators()) {
+				operators.add(op);
+			}
+			windowType = calc.getWindow().getWindowType();
+			windowRange = calc.getWindow().getSize();
+			windowSlide = calc.getWindow().getSlide();
+		    
+			WindowDefinition executionWindow = new WindowDefinition (WindowType.ROW_BASED, 1, 1);
+			System.out.println("Window is : " + executionWindow.getWindowType().toString() + " with " + executionWindow.toString());
+			
+			query = new Query (queryId, operators, outputSchema, executionWindow, null, null, queryConf, timestampReference);
+		}
+		else
+			System.out.println("The CALC is skipped");
 	    
 		WindowDefinition executionWindow = new WindowDefinition (WindowType.ROW_BASED, 1, 1);
 		System.out.println("Window is : " + executionWindow.getWindowType().toString() + " with " + executionWindow.toString());
@@ -107,5 +118,9 @@ public class SaberCalcRule implements SaberRule {
 	public Pair<Integer, Integer> getWindowOffset() {
 		return new Pair<Integer, Integer>(0,0);
 	}	
+	
+	public boolean isValid() {
+		return validCalc;
+	}
 
 }

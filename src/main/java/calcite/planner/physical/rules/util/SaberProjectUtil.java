@@ -118,7 +118,6 @@ public class SaberProjectUtil implements SaberRuleUtil{
 			i++;
 		}
 		
-		
 		// check if it works in all cases!!!
 		// Remove redundant projections, especially after aggregate.
 		if (outputSchema==null || !newOutputSchema.getSchema().equals(outputSchema.getSchema())) {
@@ -130,7 +129,7 @@ public class SaberProjectUtil implements SaberRuleUtil{
 			this.projectOperator = new QueryOperator (projectCpuCode, projectGpuCode);
 			outputSchema = newOutputSchema;
 			
-			System.out.println("OutputSchema : " + outputSchema.getSchema());
+			//System.out.println("OutputSchema : " + outputSchema.getSchema());
 		}
 		
 		window = new WindowDefinition (windowType, windowRange, windowSlide);

@@ -35,6 +35,7 @@ public class SaberAggrCalcRule implements SaberRule {
 	int windowOffset;
 	int windowBarrier;
 	int batchSize;
+	boolean validCalc;
 	
 	public SaberAggrCalcRule(ITupleSchema schema, RelNode rel, int queryId , long timestampReference, WindowDefinition window, int windowOffset, int windowBarrier, int batchSize) {
 		this.schema = schema;
@@ -74,6 +75,7 @@ public class SaberAggrCalcRule implements SaberRule {
 		
 		
 		// Aggregate Operator
+		// TODO: Handle the case when no window definition is given from SQL!!
 		SaberAggregateUtil aggr = new SaberAggregateUtil(aggrCalc.getAggCallList(), aggrCalc.getGroupSet(), batchSize, outputSchema, window);
 		aggr.build();
 		
@@ -85,19 +87,25 @@ public class SaberAggrCalcRule implements SaberRule {
 		outputSchema = aggr.getOutputSchema();
 		
 		
-		// 2nd CALC Operator
+		// 2nd CALC Operator - it may be skipped if it is redundant
 		SaberCalcUtil calc2 = new SaberCalcUtil(aggrCalc.getNextProgram(), batchSize, outputSchema, window, windowOffset, windowBarrier);
 		calc2.build();
-		
-		for ( QueryOperator op : calc2.getCalcOperators()) {
-			operators.add(op);
+				
+		outputSchema = calc2.getOutputSchema();
+		validCalc = calc2.isValid();
+		if (validCalc) {			
+			for ( QueryOperator op : calc2.getCalcOperators()) {
+				operators.add(op);
+			}
+			window = calc2.getWindow();
+			calc2CpuCode = calc2.getCpuCode();
+			calc2GpuCode = calc2.getGpuCode();
+			//windowType = calc2.getWindow().getWindowType();
+			//windowRange = calc2.getWindow().getSize();
+			//windowSlide = calc2.getWindow().getSlide();
 		}
-		
-		window = calc2.getWindow();
-		calc2CpuCode = calc2.getCpuCode();
-		calc2GpuCode = calc2.getGpuCode();
-		outputSchema = calc2.getOutputSchema(); 
-		
+		else
+			System.out.println("The CALC is skipped");
 		
 		System.out.println("The window is: " + window.toString());
 		
@@ -141,4 +149,7 @@ public class SaberAggrCalcRule implements SaberRule {
 		return new Pair<Integer, Integer>(0,0);
 	}
 
+	public boolean isValid() {
+		return validCalc;
+	}
 }
